@@ -38,3 +38,4 @@ test/logo.png
 
 # sonar output
 .scannerwork
+/.DS_Store

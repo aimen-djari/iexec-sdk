@@ -399,6 +399,7 @@ const workerpoolorderSchema = (opt) =>
     {
       workerpool: addressSchema(opt).required(),
       workerpoolprice: nRlcAmountSchema().required(),
+      hardware: string().required(),
       volume: uint256Schema().required(),
       tag: tagSchema().required(),
       category: catidSchema().required(),
@@ -431,6 +432,8 @@ const requestorderSchema = (opt) =>
       datasetmaxprice: nRlcAmountSchema().required(),
       workerpool: addressSchema(opt).required(),
       workerpoolmaxprice: nRlcAmountSchema().required(),
+      taskmaxprice: nRlcAmountSchema().required(),
+      taskduration: uint256Schema().required(),
       requester: addressSchema(opt).required(),
       volume: uint256Schema().required(),
       tag: tagSchema().required(),

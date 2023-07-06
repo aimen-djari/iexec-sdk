@@ -739,6 +739,10 @@ class IExec {
       iexecProcess.obsTask(await getContracts(), taskid, { dealid });
     this.task.claim = async (taskid) =>
       task.claim(await getContracts(), taskid);
+    this.task.extend = async (taskid, duration) =>
+      task.extend(await getContracts(), taskid, duration);
+    this.task.interrupt = async (taskid) =>
+      task.interrupt(await getContracts(), taskid);
     this.task.fetchResults = async (taskid) =>
       iexecProcess.fetchTaskResults(await getContracts(), taskid, {
         ipfsGatewayURL: await getIpfsGatewayURL(),

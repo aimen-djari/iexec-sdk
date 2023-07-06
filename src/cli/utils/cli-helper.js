@@ -44,6 +44,8 @@ const info = {
   depositing: () => 'Making deposit...',
   checkingSwapRate: () => 'Checking swap rate...',
   claiming: (obj) => `Claiming ${obj}...`,
+  extending: (obj) => `Extending ${obj}...`,
+  interrupting: (obj) => `Interrupting ${obj}...`,
   deposited: (amount) => `Deposited ${amount} RLC to your iExec account`,
   withdrawing: () => 'Making withdraw...',
   withdrawn: (amount) => `${amount} RLC withdrawn from your iExec account`,
@@ -79,6 +81,8 @@ const desc = {
   showObj: (objName, owner = 'user') => `show ${owner} ${objName} details`,
   countObj: (objName, owner = 'user') => `get ${owner} ${objName} count`,
   claimObj: (objName) => `claim a ${objName} that is not COMPLETED`,
+  extendObj: (objName) => `extend a ${objName} that is not COMPLETED`,
+  interruptObj: (objName) => `interrupt a ${objName} that is not COMPLETED`,
   deposit: () => 'deposit RLC onto your iExec account (default unit nRLC)',
   withdraw: () => 'withdraw RLC from your iExec account (default unit nRLC)',
   getETH: () => 'apply for test ether from pre-registered faucets',
@@ -373,6 +377,10 @@ const orderOption = {
   workerpoolprice: () => [
     '--workerpool-price <amount unit...>',
     'workerpool price per task (default unit nRLC)',
+  ],
+  hardware: () => [
+    '--hardware <hardware requirements...>',
+    'specify the hardware requirements of the workerpool',
   ],
   volume: () => ['--volume <volume>', 'number of run'],
   tag: () => ['--tag <tag>', 'specify tags\n* usage: --tag tag1,tag2'],
