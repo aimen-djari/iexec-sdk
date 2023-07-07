@@ -330,7 +330,7 @@ const deployAndGetWorkerpoolorder = async (
 		.createWorkerpoolorder({
 			workerpool,
 			workerpoolprice,
-			hardware: '<hardware>',
+			taskmaxduration: '100',
 			volume,
 			category,
 			trust,
@@ -4086,7 +4086,7 @@ describe('[order]', () => {
 		expect(order).toEqual({
 			apprestrict: '0x0000000000000000000000000000000000000000',
 			category: '5',
-			hardware: '<hardware>',
+			taskmaxduration: '100',
 			datasetrestrict: '0x0000000000000000000000000000000000000000',
 			requesterrestrict: '0x0000000000000000000000000000000000000000',
 			tag: '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -4126,7 +4126,7 @@ describe('[order]', () => {
 		expect(order).toEqual({
 			apprestrict,
 			category: '5',
-			hardware: '<hardware>',
+			taskmaxduration: '100',
 			datasetrestrict,
 			requesterrestrict,
 			tag: '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -4172,7 +4172,6 @@ describe('[order]', () => {
 			volume: '1',
 			workerpool: '0x0000000000000000000000000000000000000000',
 			workerpoolmaxprice: '0',
-			taskmaxprice: '0',
 			taskduration: '100',
 		});
 	});
@@ -4228,7 +4227,6 @@ describe('[order]', () => {
 			volume: '5',
 			workerpool,
 			workerpoolmaxprice: '100000000',
-			taskmaxprice: '0',
 			taskduration: '100',
 		});
 	});

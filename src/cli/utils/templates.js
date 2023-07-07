@@ -92,7 +92,7 @@ const order = {
   workerpoolorder: {
     workerpool: '0x0000000000000000000000000000000000000000',
     workerpoolprice: '0',
-    hardware: '<hardware>',
+    taskmaxduration: '100',
     volume: '1',
     category: '0',
     trust: '0',
@@ -108,7 +108,6 @@ const order = {
     datasetmaxprice: '0',
     workerpool: '0x0000000000000000000000000000000000000000',
     workerpoolmaxprice: '0',
-    taskmaxprice: '0',
     taskduration: '100',
     volume: '1',
     category: '0',

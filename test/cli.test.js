@@ -2249,7 +2249,7 @@ describe('[Mainchain]', () => {
 				expect(orderShowRes.workerpoolorder.order).toEqual({
 					workerpool: address,
 					workerpoolprice: 0,
-					hardware: '<hardware>',
+					taskmaxduration: '100',
 					volume: 1,
 					tag: NULL_BYTES32,
 					trust: 0,
@@ -2285,7 +2285,7 @@ describe('[Mainchain]', () => {
 				expect(orderShowRes.workerpoolorder.order).toEqual({
 					workerpool: address,
 					workerpoolprice: 2,
-					hardware: '<hardware>',
+					taskmaxduration: '100',
 					volume: 5,
 					tag: '0x0000000000000000000000000000000000000000000000000000000000000001',
 					trust: 20,

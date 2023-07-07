@@ -378,9 +378,9 @@ const orderOption = {
     '--workerpool-price <amount unit...>',
     'workerpool price per task (default unit nRLC)',
   ],
-  hardware: () => [
-    '--hardware <hardware requirements...>',
-    'specify the hardware requirements of the workerpool',
+  taskmaxduration: () => [
+    '--taskmaxduration <amount>',
+    'specify the maximal duration of a task (hours)',
   ],
   volume: () => ['--volume <volume>', 'number of run'],
   tag: () => ['--tag <tag>', 'specify tags\n* usage: --tag tag1,tag2'],
