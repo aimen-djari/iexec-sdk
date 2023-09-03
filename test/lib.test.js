@@ -330,7 +330,7 @@ const deployAndGetWorkerpoolorder = async (
 		.createWorkerpoolorder({
 			workerpool,
 			workerpoolprice,
-			taskmaxduration: '100',
+			taskmaxduration: '10000',
 			volume,
 			category,
 			trust,
@@ -988,7 +988,7 @@ describe('[workflow]', () => {
 			dataset: datasetorder.dataset,
 			datasetmaxprice: datasetorder.datasetprice,
 			workerpoolmaxprice: workerpoolorderToExtend.workerpoolprice,
-			taskduration: '2',
+			taskduration: '7200',
 			requester: await iexec.wallet.getAddress(),
 			category: workerpoolorderToExtend.category,
 			volume: '1',
@@ -1102,7 +1102,7 @@ describe('[workflow]', () => {
 		expect(showTaskActiveRes.taskTimedOut).toBe(false);
 
 		const extendTaskRes = await iexec.task.extend(
-			showDealRes.tasks[taskIdx], '1'
+			showDealRes.tasks[taskIdx], '1000'
 		);
 		expect(extendTaskRes).toBeDefined();
 		
@@ -1115,7 +1115,176 @@ describe('[workflow]', () => {
 		expect(showTaskExtendedRes.status).toBe(1);
 		expect(showTaskExtendedRes.dealid).toBe(matchOrdersRes.dealid);
 		expect(showTaskExtendedRes.idx.eq(new BN(taskIdx))).toBe(true);
-		expect(showTaskExtendedRes.timeref.eq(new BN(10800))).toBe(true);
+		expect(showTaskExtendedRes.timeref.eq(new BN(8200))).toBe(true);
+		expect(
+			showTaskExtendedRes.contributionDeadline.eq(showDealExtendedRes.finalTime),
+		).toBe(true);
+		expect(showTaskExtendedRes.finalDeadline.eq(showDealExtendedRes.finalTime)).toBe(
+			true,
+		);
+		expect(showTaskExtendedRes.statusName).toBe('ACTIVE');
+	});
+	
+	test('extend task (too large duration)', async () => {
+		const signer = utils.getSignerFromPrivateKey(tokenChainUrl, PRIVATE_KEY);
+		const iexec = new IExec(
+			{
+				ethProvider: signer,
+			},
+			{
+				hubAddress,
+				isNative: false,
+				resultProxyURL: 'https://result-proxy.iex.ec',
+			},
+		);
+		
+		const wporder = await iexec.order.createWorkerpoolorder({
+			workerpool: workerpoolorderToExtend.workerpool,
+			workerpoolprice: '0',
+			category: 5,
+			volume: '1',
+		});
+		
+		const signedwporder = await iexec.order.signWorkerpoolorder(wporder, {
+			checkRequest: false,
+		});
+		
+		const order = await iexec.order.createRequestorder({
+			app: apporder.app,
+			appmaxprice: apporder.appprice,
+			dataset: datasetorder.dataset,
+			datasetmaxprice: datasetorder.datasetprice,
+			workerpoolmaxprice: signedwporder.workerpoolprice,
+			taskduration: '7200',
+			requester: await iexec.wallet.getAddress(),
+			category: signedwporder.category,
+			volume: '1',
+		});
+		const signedorder = await iexec.order.signRequestorder(order, {
+			checkRequest: false,
+		});
+		
+		const totalPrice = new BN(order.appmaxprice)
+			.add(new BN(order.datasetmaxprice))
+			.add(new BN(order.workerpoolmaxprice))
+			.mul(new BN(order.taskduration))
+			.mul(new BN(order.volume));
+		await iexec.account.deposit(totalPrice);
+		expect(signedorder.sign).toBeDefined();
+		const matchOrdersRes = await iexec.order.matchOrders(
+			{
+				apporder,
+				datasetorder,
+				workerpoolorder: signedwporder,
+				requestorder: signedorder,
+			},
+			{ checkRequest: false },
+		);
+		expect(matchOrdersRes).toBeDefined();
+		expect(matchOrdersRes.dealid).toBeDefined();
+		expect(matchOrdersRes.txHash).toBeDefined();
+		expect(matchOrdersRes.volume.eq(new BN(1))).toBe(true);
+
+		const showDealRes = await iexec.deal.show(matchOrdersRes.dealid);
+		expect(showDealRes).toBeDefined();
+		expect(showDealRes.app).toBeDefined();
+		expect(showDealRes.app.pointer).toBe(apporder.app);
+		expect(showDealRes.app.owner).toBeDefined();
+		expect(showDealRes.app.price.eq(new BN(apporder.appprice))).toBe(true);
+		expect(showDealRes.dataset).toBeDefined();
+		expect(showDealRes.dataset.pointer).toBe(datasetorder.dataset);
+		expect(showDealRes.dataset.owner).toBeDefined();
+		expect(
+			showDealRes.dataset.price.eq(new BN(datasetorder.datasetprice)),
+		).toBe(true);
+		expect(showDealRes.workerpool).toBeDefined();
+		expect(showDealRes.workerpool.pointer).toBe(
+			signedwporder.workerpool,
+		);
+		expect(showDealRes.workerpool.owner).toBeDefined();
+		expect(
+			showDealRes.workerpool.price.eq(
+				new BN(signedwporder.workerpoolprice),
+			),
+		).toBe(true);
+		expect(showDealRes.trust.eq(new BN(1))).toBe(true);
+		expect(showDealRes.category.eq(new BN(signedorder.category))).toBe(true);
+		expect(showDealRes.tag).toBe(signedorder.tag);
+		expect(showDealRes.params).toBe(signedorder.params);
+		expect(showDealRes.startTime instanceof BN).toBe(true);
+		expect(showDealRes.finalTime instanceof BN).toBe(true);
+		expect(showDealRes.finalTime.gte(showDealRes.startTime)).toBe(true);
+		expect(showDealRes.deadlineReached).toBe(false);
+		expect(showDealRes.duration.eq(new BN(7200))).toBe(true);
+		expect(showDealRes.botFirst.eq(new BN(0))).toBe(true);
+		expect(showDealRes.botSize.eq(new BN(1))).toBe(true);
+		expect(showDealRes.workerStake.eq(new BN(0))).toBe(true);
+		expect(showDealRes.schedulerRewardRatio.eq(new BN(1))).toBe(true);
+		expect(showDealRes.requester).toBe(signedorder.requester);
+		expect(showDealRes.beneficiary).toBe(signedorder.beneficiary);
+		expect(showDealRes.callback).toBe(signedorder.callback);
+		expect(typeof showDealRes.tasks).toBe('object');
+		expect(showDealRes.tasks[0]).toBeDefined();
+		expect(showDealRes.tasks[1]).toBeUndefined();
+
+		const showTaskUnsetRes = await iexec.task
+			.show(showDealRes.tasks[0])
+			.catch((e) => e);
+		expect(showTaskUnsetRes instanceof errors.ObjectNotFoundError).toBe(true);
+		expect(showTaskUnsetRes.message).toBe(
+			`No task found for id ${showDealRes.tasks[0]} on chain ${networkId}`,
+		);
+
+		const taskIdx = 0;
+		await initializeTask(
+			tokenChainWallet,
+			hubAddress,
+			matchOrdersRes.dealid,
+			taskIdx,
+		);
+		const showTaskActiveRes = await iexec.task.show(
+			showDealRes.tasks[taskIdx],
+		);
+		expect(showTaskActiveRes.status).toBe(1);
+		expect(showTaskActiveRes.dealid).toBe(matchOrdersRes.dealid);
+		expect(showTaskActiveRes.idx.eq(new BN(taskIdx))).toBe(true);
+		expect(showTaskActiveRes.timeref.eq(new BN(7200))).toBe(true);
+		expect(
+			showTaskActiveRes.contributionDeadline.eq(showDealRes.finalTime),
+		).toBe(true);
+		expect(showTaskActiveRes.finalDeadline.eq(showDealRes.finalTime)).toBe(
+			true,
+		);
+		expect(showTaskActiveRes.revealCounter.eq(new BN(0))).toBe(true);
+		expect(showTaskActiveRes.winnerCounter.eq(new BN(0))).toBe(true);
+		expect(showTaskActiveRes.contributors).toStrictEqual({});
+		expect(showTaskActiveRes.consensusValue).toBe(
+			'0x0000000000000000000000000000000000000000000000000000000000000000',
+		);
+		expect(showTaskActiveRes.resultDigest).toBe(
+			'0x0000000000000000000000000000000000000000000000000000000000000000',
+		);
+		expect(showTaskActiveRes.results).toStrictEqual({ storage: 'none' });
+		expect(showTaskActiveRes.idx.eq(new BN(taskIdx))).toBe(true);
+		expect(showTaskActiveRes.statusName).toBe('ACTIVE');
+		expect(showTaskActiveRes.taskTimedOut).toBe(false);
+
+		const extendTaskRes = await iexec.task.extend(
+			showDealRes.tasks[taskIdx], '3600'
+		).catch((e) => e);
+		
+		expect(extendTaskRes instanceof Error).toBe(true);
+		
+		
+		const showTaskExtendedRes = await iexec.task.show(
+			showDealRes.tasks[taskIdx],
+		);
+		const showDealExtendedRes = await iexec.deal.show(matchOrdersRes.dealid);
+		
+		expect(showTaskExtendedRes.status).toBe(1);
+		expect(showTaskExtendedRes.dealid).toBe(matchOrdersRes.dealid);
+		expect(showTaskExtendedRes.idx.eq(new BN(taskIdx))).toBe(true);
+		expect(showTaskExtendedRes.timeref.eq(new BN(7200))).toBe(true);
 		expect(
 			showTaskExtendedRes.contributionDeadline.eq(showDealExtendedRes.finalTime),
 		).toBe(true);
@@ -1143,7 +1312,7 @@ describe('[workflow]', () => {
 			dataset: datasetorder.dataset,
 			datasetmaxprice: datasetorder.datasetprice,
 			workerpoolmaxprice: workerpoolorderToInterrupt.workerpoolprice,
-			taskduration: '2',
+			taskduration: '7200',
 			requester: await iexec.wallet.getAddress(),
 			category: workerpoolorderToInterrupt.category,
 			volume: '1',
@@ -1265,18 +1434,15 @@ describe('[workflow]', () => {
 			showDealRes.tasks[taskIdx],
 		);
 		const showDealInterruptedRes = await iexec.deal.show(matchOrdersRes.dealid);
-		expect(showTaskInterruptedRes.status).toBe(5);
+		expect(showTaskInterruptedRes.status).toBe(1);
 		expect(showTaskInterruptedRes.dealid).toBe(matchOrdersRes.dealid);
 		expect(showTaskInterruptedRes.idx.eq(new BN(taskIdx))).toBe(true);
 		expect(showTaskInterruptedRes.timeref.gte(new BN(0))).toBe(true);
-		expect(showTaskInterruptedRes.timeref.lt(new BN(10800))).toBe(true);
+		expect(showTaskInterruptedRes.timeref.lt(new BN(7200))).toBe(true);
 		expect(
-			showTaskInterruptedRes.contributionDeadline.eq(showDealInterruptedRes.finalTime),
+			showTaskInterruptedRes.contributionDeadline.eq(showTaskInterruptedRes.finalDeadline),
 		).toBe(true);
-		expect(showTaskInterruptedRes.finalDeadline.eq(showDealInterruptedRes.finalTime)).toBe(
-			true,
-		);
-		expect(showTaskInterruptedRes.statusName).toBe('INTERRUPTED');
+		expect(showTaskInterruptedRes.statusName).toBe('TIMEOUT');
 	});
 });
 
@@ -4086,7 +4252,7 @@ describe('[order]', () => {
 		expect(order).toEqual({
 			apprestrict: '0x0000000000000000000000000000000000000000',
 			category: '5',
-			taskmaxduration: '100',
+			taskmaxduration: '10000',
 			datasetrestrict: '0x0000000000000000000000000000000000000000',
 			requesterrestrict: '0x0000000000000000000000000000000000000000',
 			tag: '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -4126,7 +4292,7 @@ describe('[order]', () => {
 		expect(order).toEqual({
 			apprestrict,
 			category: '5',
-			taskmaxduration: '100',
+			taskmaxduration: '10000',
 			datasetrestrict,
 			requesterrestrict,
 			tag: '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -4172,7 +4338,7 @@ describe('[order]', () => {
 			volume: '1',
 			workerpool: '0x0000000000000000000000000000000000000000',
 			workerpoolmaxprice: '0',
-			taskduration: '100',
+			taskduration: '3600',
 		});
 	});
 
@@ -4227,7 +4393,7 @@ describe('[order]', () => {
 			volume: '5',
 			workerpool,
 			workerpoolmaxprice: '100000000',
-			taskduration: '100',
+			taskduration: '3600',
 		});
 	});
 
@@ -4554,7 +4720,7 @@ describe('[order]', () => {
 		});
 		expect(res).toMatch(bytes32Regex);
 		expect(res).toBe(
-			'0x959e3af77b2f6637c5135c90627bb76e82e5a3b984cddb8f36f41ec23d48b051',
+			'0xd10228dc1aff84e4d54345cc66fd8eed2d9f7e35b1067c174137a1c3c6ab4dac',
 		);
 	});
 
@@ -4585,7 +4751,7 @@ describe('[order]', () => {
 		});
 		expect(res).toMatch(bytes32Regex);
 		expect(res).toBe(
-			'0x1168659c6588cd9ccbab4461ee618aff59406179632b6233a44d823b07112b37',
+			'0x844afa2a9ab8675e9a356c48af51790605d4d10245f9efde870da80f69280181',
 		);
 	});
 

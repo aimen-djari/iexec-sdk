@@ -601,6 +601,7 @@ const throwIfMissing = () => {
 
 module.exports = {
   throwIfMissing,
+  stringSchema: string,
   uint256Schema,
   nRlcAmountSchema,
   weiAmountSchema,

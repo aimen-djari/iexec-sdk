@@ -6,10 +6,13 @@ const {
 	cleanRPC,
 	NULL_BYTES32,
 	NULL_BYTES,
+	BN,
 } = require('../utils/utils');
+
 const { bytes32Schema, uint256Schema, throwIfMissing } = require('../utils/validator');
 const { ObjectNotFoundError } = require('../utils/errors');
 const { wrapCall, wrapSend, wrapWait } = require('../utils/errorWrappers');
+const deal = require('./deal');
 
 const debug = Debug('iexec:task');
 const objName = 'task';
@@ -113,6 +116,25 @@ const claim = async (
 	}
 };
 
+const isServiceTask = async (
+	contracts = throwIfMissing(),
+	taskid = throwIfMissing(),
+) => {
+	try {
+		const vTaskId = await bytes32Schema().validate(taskid);
+		const task = await show(contracts, vTaskId);
+		const vDealId = await bytes32Schema().validate(task.dealid);
+		const vDeal = await deal.show(contracts, vDealId);
+		const vDealCategory = new BN(vDeal.category);
+		
+		return vDealCategory == 5;
+
+	} catch (error) {
+		debug('isServiceTask()', error);
+		throw error;
+	}
+};
+
 const extend = async (
 	contracts = throwIfMissing(),
 	taskid = throwIfMissing(),
@@ -123,6 +145,11 @@ const extend = async (
 		const vDuration = await uint256Schema().validate(duration);
 		const task = await show(contracts, vTaskId);
 		const taskStatus = task.status;
+		const vDealId = await bytes32Schema().validate(task.dealid);
+		const vDeal = await deal.show(contracts, vDealId);
+		const vDealDuration = new BN(vDeal.duration);
+		const vDealMaxDuration = new BN(vDeal.maxduration);
+		const extensionDuration = new BN(vDuration);
 
 		if ([2, 3, 4].includes(taskStatus)) {
 			throw Error(
@@ -136,6 +163,13 @@ const extend = async (
 				`Cannot extend a ${objName} that reached the consensus deadline date: ${new Date(
 					1000 * parseInt(task.finalDeadline, 10),
 				)}`,
+			);
+		}
+		
+		if(vDealDuration.add(extensionDuration).gt(vDealMaxDuration)){
+			throw Error(
+				`Cannot extend a ${objName} with a duration greater than the deal maximum duration
+				}`,
 			);
 		}
 
@@ -201,4 +235,5 @@ module.exports = {
 	claim,
 	extend,
 	interrupt,
+	isServiceTask,
 };

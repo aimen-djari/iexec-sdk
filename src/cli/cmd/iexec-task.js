@@ -155,7 +155,8 @@ show
         }
       }
 
-      const claimable = taskResult.status < 3 && !!taskResult.taskTimedOut;
+	  const isServiceTask = await taskModule.isServiceTask(chain.contracts, taskid);
+      const claimable = taskResult.status < 3 && !!taskResult.taskTimedOut && !isServiceTask;
 
       const cleanTask = stringifyNestedBn(taskResult);
       const raw = {

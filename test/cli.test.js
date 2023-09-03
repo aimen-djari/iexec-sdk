@@ -1267,7 +1267,7 @@ describe('[Mainchain]', () => {
 			workerpool: mainchainWorkerpool,
 			category: mainchainServiceCatid,
 			volume: '1',
-			taskduration: '2',
+			taskduration: '7200',
 		});
 		const raw = await execAsync(
 			`${iexecPath} order sign --request --skip-request-check --raw`,
@@ -1788,7 +1788,7 @@ describe('[Mainchain]', () => {
 	});
 
 	test('[mainchain] iexec task extend (service)', async () => {
-		let duration = '1';
+		let duration = '1000';
 		const raw = await execAsync(
 			`${iexecPath} task extend ${mainchainServiceTaskid} ${duration} --raw`,
 		);
@@ -1855,8 +1855,8 @@ describe('[Mainchain]', () => {
 		expect(res.task.contributors).toStrictEqual({});
 		expect(res.task.resultDigest).toBe(NULL_BYTES32);
 		expect(res.task.results).toStrictEqual({ storage: 'none' });
-		expect(res.task.statusName).toBe('INTERRUPTED');
-		expect(res.task.taskTimedOut).toBe(false);
+		expect(res.task.statusName).toBe('TIMEOUT');
+		expect(res.task.taskTimedOut).toBe(true);
 		expect(res.claimable).toBe(false);
 	});
 
@@ -2249,7 +2249,7 @@ describe('[Mainchain]', () => {
 				expect(orderShowRes.workerpoolorder.order).toEqual({
 					workerpool: address,
 					workerpoolprice: 0,
-					taskmaxduration: '100',
+					taskmaxduration: '10000',
 					volume: 1,
 					tag: NULL_BYTES32,
 					trust: 0,
@@ -2285,7 +2285,7 @@ describe('[Mainchain]', () => {
 				expect(orderShowRes.workerpoolorder.order).toEqual({
 					workerpool: address,
 					workerpoolprice: 2,
-					taskmaxduration: '100',
+					taskmaxduration: '10000',
 					volume: 5,
 					tag: '0x0000000000000000000000000000000000000000000000000000000000000001',
 					trust: 20,
@@ -2951,7 +2951,7 @@ describe('[Sidechain]', () => {
 			workerpool: sidechainWorkerpool,
 			category: sidechainServiceCatid,
 			volume: '1',
-			taskduration: '2',
+			taskduration: '7200',
 		});
 		const raw = await execAsync(
 			`${iexecPath} order sign --request --skip-request-check --raw`,
@@ -3175,7 +3175,7 @@ describe('[Sidechain]', () => {
 	});
 
 	test('[sidechain] iexec task extend (service)', async () => {
-		let duration = '1';
+		let duration = '1000';
 		const raw = await execAsync(
 			`${iexecPath} task extend ${sidechainServiceTaskid} ${duration} --raw`,
 		);
@@ -3242,8 +3242,8 @@ describe('[Sidechain]', () => {
 		expect(res.task.contributors).toStrictEqual({});
 		expect(res.task.resultDigest).toBe(NULL_BYTES32);
 		expect(res.task.results).toStrictEqual({ storage: 'none' });
-		expect(res.task.statusName).toBe('INTERRUPTED');
-		expect(res.task.taskTimedOut).toBe(false);
+		expect(res.task.statusName).toBe('TIMEOUT');
+		expect(res.task.taskTimedOut).toBe(true);
 		expect(res.claimable).toBe(false);
 	});
 

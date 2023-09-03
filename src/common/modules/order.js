@@ -1149,6 +1149,16 @@ const getMatchableVolume = async (
         `datasetmaxprice too low (expected ${datasetPrice}, got ${datasetMaxPrice})`,
       );
     }
+    
+    // duration check
+    const workerpoolDuration = new BN(vWorkerpoolOrder.taskmaxduration);
+    const requesterDuration = new BN(vRequestOrder.taskduration);
+
+    if (workerpoolDuration.lt(requesterDuration)) {
+      throw new Error(
+        `requestOrder.taskduration should be greater or equal to workerpoolOrder.taskmaxduration`,
+      );
+    }
 
     // workerpool owner stake check
     const workerpoolOwner = await getWorkerpoolOwner(
@@ -1301,7 +1311,6 @@ const matchOrders = async (
       vRequestOrder,
     );
     const iexecContract = contracts.getIExecContract();
-    //console.log(iexecContract);
     const tx = await wrapSend(
       iexecContract.matchOrders(
         appOrderStruct,
@@ -1400,7 +1409,7 @@ const createWorkerpoolorder = async (
     ethProvider: contracts.provider,
   }).validate(workerpool),
   workerpoolprice: await nRlcAmountSchema().validate(workerpoolprice),
-  taskmaxduration: await uint256Schema().validate('100'),
+  taskmaxduration: await uint256Schema().validate('10000'),
   volume: await uint256Schema().validate(volume),
   category: await uint256Schema().validate(category),
   trust: await uint256Schema().validate(trust),
@@ -1426,7 +1435,7 @@ const createRequestorder = async (
     appmaxprice = '0',
     datasetmaxprice = '0',
     workerpoolmaxprice = '0',
-    taskduration = '100',
+    taskduration = '3600',
     volume = '1',
     requester,
     beneficiary,
