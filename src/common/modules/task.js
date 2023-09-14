@@ -168,8 +168,7 @@ const extend = async (
 		
 		if(vDealDuration.add(extensionDuration).gt(vDealMaxDuration)){
 			throw Error(
-				`Cannot extend a ${objName} with a duration greater than the deal maximum duration
-				}`,
+				`Cannot extend a ${objName} with a duration greater than the deal maximum duration}`,
 			);
 		}
 

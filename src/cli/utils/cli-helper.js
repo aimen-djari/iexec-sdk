@@ -380,7 +380,7 @@ const orderOption = {
   ],
   taskmaxduration: () => [
     '--taskmaxduration <amount>',
-    'specify the maximal duration of a task (hours)',
+    'specify the maximal duration of a task (seconds)',
   ],
   volume: () => ['--volume <volume>', 'number of run'],
   tag: () => ['--tag <tag>', 'specify tags\n* usage: --tag tag1,tag2'],

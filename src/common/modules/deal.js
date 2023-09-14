@@ -132,11 +132,15 @@ const show = async (
       showCategory(contracts, deal.category),
       getTimeoutRatio(contracts),
     ]);
-    let duration = workClockTimeRef;
+    let duration;
+    let finalTime;
     if(deal.category == 5){
 		duration = deal.duration;
+		finalTime = deal.startTime.add(duration);
+	} else{
+		duration = workClockTimeRef;
+		finalTime = deal.startTime.add(timeoutRatio.mul(duration));
 	}
-    const finalTime = deal.startTime.add(timeoutRatio.mul(duration));
     const now = Math.floor(Date.now() / 1000);
     const deadlineReached = now >= finalTime.toNumber();
 
