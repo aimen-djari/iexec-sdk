@@ -111,6 +111,8 @@ async function main() {
   cli.command('storage', 'manage remote storage');
 
   cli.command('registry', 'interact with iExec registry');
+  
+  cli.command('voucher', 'interact with iExec voucher');
 
   const infoCmd = cli.command('info');
   addGlobalOptions(infoCmd);

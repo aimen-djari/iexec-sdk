@@ -120,6 +120,13 @@ const desc = {
   requestRun: () => 'request an iExec application execution at limit price',
   initStorage: () => 'initialize the remote storage',
   checkStorage: () => 'check if the remote storage is initialized',
+  authorize: (objName) => `authorize a characteristic <address> in ${objName}`,
+  unauthorize: (objName) => `unauthorize a characteristic <address> in ${objName}`,
+  view: (objName) => `view a characteristic <id> in ${objName}`,
+  count: (objName) => `count number of characteristics in ${objName}`,
+  request: (objName) => `execute a task using the ${objName}`,
+  depositVoucher: (objName) => `deposit <amount> for <address> in ${objName}`,
+  showBalance: (objName) => `show balance of <address> in ${objName}`,
 };
 
 const option = {
@@ -325,6 +332,25 @@ const option = {
     '--skip-request-check',
     'skip request validity checks, this may result in task execution fail',
   ],
+  authorizeApp: () => ['--app <address>', 'authorize an app in voucher'],
+  authorizeDataset: () => ['--dataset <address>', 'authorize a dataset in voucher'],
+  authorizeWorkerpool: () => [
+    '--workerpool <address>',
+    'authorize a workerpool in voucher',
+  ],
+  unauthorizeApp: () => ['--app <address>', 'unauthorize an app in voucher'],
+  unauthorizeDataset: () => ['--dataset <address>', 'unauthorize a dataset in voucher'],
+  unauthorizeWorkerpool: () => [
+    '--workerpool <address>',
+    'unauthorize a workerpool in voucher',
+  ],
+  viewAppCharacteristics: () => ['--app <id>', 'view authorized app'],
+  viewDatasetCharacteristics: () => ['--dataset <id>', 'view authorized dataset'],
+  viewWorkerpoolCharacteristics: () => ['--workerpool <id>', 'view authorized workerpool'],
+  countAppCharacteristics: () => ['--app', 'count authorized apps'],
+  countDatasetCharacteristics: () => ['--dataset', 'count authorized datasets'],
+  countWorkerpoolCharacteristics: () => ['--workerpool', 'count authorized workerpools'],
+  amount: () => ['--amount', 'deposit given amount in voucher'],
 };
 
 const orderOption = {
