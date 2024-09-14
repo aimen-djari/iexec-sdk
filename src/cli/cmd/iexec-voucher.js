@@ -4,11 +4,18 @@ const Debug = require('debug');
 const cli = require('commander');
 const path = require('path');
 const fs = require('fs-extra');
+const {
+	loadSignedOrders,
+} = require('../utils/fs');
 const voucherModule = require('../../common/modules/voucher');
+const {
+  checkRequestRequirements,
+} = require('../../common/modules/request-helper');
 const {
 	stringifyNestedBn,
 	decryptResult,
 } = require('../../common/utils/utils');
+const { NULL_ADDRESS } = require('../../common/utils/utils');
 const {
 	finalizeCli,
 	addGlobalOptions,
@@ -157,7 +164,7 @@ requestTask
 					);
 				});
 			}
-
+			
 			await connectKeystore(chain, keystore, { txOptions });
 			spinner.start(info.filling(objName));
 			const { dealid, volume, txHash } = await voucherModule.requestTask(
@@ -181,29 +188,20 @@ addGlobalOptions(deposit);
 addWalletLoadOptions(deposit);
 deposit
 	.option(...option.chain())
-	.option(...option.amount())
 	.description(desc.depositVoucher(objName))
-	.action(async (address, opts) => {
+	.action(async (address, amount, opts) => {
 		await checkUpdate(opts);
 		const spinner = Spinner(opts);
 
 		try {
-
-
-			if (!(opts.amount)) {
-				throw new Error(
-					'No amount specified, you should specify amount with --amount',
-				);
-			}
-
-			let amount = opts.amount;
-
+			
 			const walletOptions = await computeWalletLoadOptions(opts);
 			const keystore = Keystore(walletOptions);
 			const txOptions = await computeTxOptions(opts);
 			const chain = await loadChain(opts.chain, { txOptions, spinner });
 			await connectKeystore(chain, keystore, { txOptions });
-
+					
+			
 			spinner.start(info.showing(objName));
 			const txHash = await voucherModule.deposit(chain.contracts, address, amount);
 			spinner.succeed(`Voucher deposit of ${amount} xRLC to ${address}: ${txHash}`);
@@ -234,9 +232,9 @@ show
 			const failed = [];
 
 			try {
-				const txHash = await voucherModule.show(chain.contracts, address);
-				spinner.succeed(`Voucher balance of ${address}: ${txHash} xRLC`);
-				Object.assign(success, { number: txHash });
+				const number = await voucherModule.show(chain.contracts, address);
+				spinner.info(`Voucher balance of ${address}: ${number} xRLC`);
+				Object.assign(success, { number: number });
 			} catch (error) {
 				failed.push(`show: ${error.message}`);
 			}
@@ -305,7 +303,7 @@ count
 					}
 
 					spinner.info(`${characteristicName} successfully counted with number (${number})`);
-					Object.assign(success, { number: number});
+					Object.assign(success, { number: number });
 				} catch (error) {
 					failed.push(`${characteristicName}: ${error.message}`);
 				}
@@ -422,11 +420,7 @@ authorize
 					'No option specified, you should choose one (--app | --dataset | --workerpool)',
 				);
 			}
-			
-			console.log(opts.app);
-			console.log(opts.dataset);
-			console.log(opts.workerpool);
-			
+
 			const walletOptions = await computeWalletLoadOptions(opts);
 			const txOptions = await computeTxOptions(opts);
 			const keystore = Keystore(walletOptions);

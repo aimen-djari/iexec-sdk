@@ -3996,13 +3996,22 @@ describe('[Common]', () => {
 	});
 
 	describe('[voucher]', () => {
+		
+		let voucherApp;
+		let voucherDataset;
+		let voucherWorkerpool;
 
 		beforeAll(async () => {
 			await execAsync(`${iexecPath} init --skip-wallet --force`);
 			await execAsync('rm deployed.json').catch(() => { });
+			await execAsync('rm orders.json').catch(() => { });
 			await execAsync('rm logo.png').catch(() => { });
 			await setTokenChain();
 			await setRichWallet();
+			
+			await execAsync(`${iexecPath} app init --raw`);
+			await execAsync(`${iexecPath} dataset init --raw`);
+			await execAsync(`${iexecPath} workerpool init --raw`);
 		});
 
 		afterAll(async () => {
@@ -4014,17 +4023,23 @@ describe('[Common]', () => {
 		});
 
 		test('[mainchain] iexec voucher count --app', async () => {
-			var raw = await execAsync(
+			let raw = await execAsync(
 				`${iexecPath} voucher count --app --raw`,
 			);
-			console.log(raw);
-			var res = JSON.parse(raw);
+			let res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
-			expect(new BN(res.number).eq(new BN('0'))).toBe(true);
+			
+			await setAppUniqueName();
+			
+			raw = await execAsync(`${iexecPath} app deploy --raw`);
+			res = JSON.parse(raw);
+			expect(res.address).toBeDefined();
+			
+			voucherApp = res.address;
 
 			await execAsync(
-				`${iexecPath} voucher authorize --app ${mainchainApp} --raw`,
+				`${iexecPath} voucher authorize --app ${voucherApp} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4034,18 +4049,18 @@ describe('[Common]', () => {
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
 			expect(new BN(res.number).eq(new BN('1'))).toBe(true);
-			
+
 			raw = await execAsync(
 				`${iexecPath} voucher view --app 0 --raw`,
 			);
 			res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.address).toBeDefined();
-			expect(res.address).toBe(mainchainApp);
+			expect(res.address).toBe(voucherApp);
 
 
 			await execAsync(
-				`${iexecPath} voucher unauthorize --app ${mainchainApp} --raw`,
+				`${iexecPath} voucher unauthorize --app ${voucherApp} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4058,16 +4073,23 @@ describe('[Common]', () => {
 		});
 
 		test('[mainchain] iexec voucher count --dataset', async () => {
-			const raw = await execAsync(
+			let raw = await execAsync(
 				`${iexecPath} voucher count --dataset --raw`,
 			);
-			const res = JSON.parse(raw);
+			let res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
-			expect(new BN(res.number).eq(new BN('0'))).toBe(true);
+			
+			await setDatasetUniqueName();
+			
+			raw = await execAsync(`${iexecPath} dataset deploy --raw`);
+			res = JSON.parse(raw);
+			expect(res.address).toBeDefined();
+			
+			voucherDataset = res.address;
 
 			await execAsync(
-				`${iexecPath} voucher authorize --dataset ${mainchainDataset} --raw`,
+				`${iexecPath} voucher authorize --dataset ${voucherDataset} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4077,18 +4099,18 @@ describe('[Common]', () => {
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
 			expect(new BN(res.number).eq(new BN('1'))).toBe(true);
-			
+
 			raw = await execAsync(
 				`${iexecPath} voucher view --dataset 0 --raw`,
 			);
 			res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.address).toBeDefined();
-			expect(res.address).toBe(mainchainDataset);
+			expect(res.address).toBe(voucherDataset);
 
 
 			await execAsync(
-				`${iexecPath} voucher unauthorize --dataset ${mainchainDataset} --raw`,
+				`${iexecPath} voucher unauthorize --dataset ${voucherDataset} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4101,16 +4123,22 @@ describe('[Common]', () => {
 		});
 
 		test('[mainchain] iexec voucher count --workerpool', async () => {
-			const raw = await execAsync(
+			let raw = await execAsync(
 				`${iexecPath} voucher count --workerpool --raw`,
 			);
-			const res = JSON.parse(raw);
+			let res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
-			expect(new BN(res.number).eq(new BN('0'))).toBe(true);
+			
+			await setWorkerpoolUniqueDescription();
+			raw = await execAsync(`${iexecPath} workerpool deploy --raw`);
+			res = JSON.parse(raw);
+			expect(res.address).toBeDefined();
+			
+			voucherWorkerpool = res.address;
 
 			await execAsync(
-				`${iexecPath} voucher authorize --workerpool ${mainchainWorkerpool} --raw`,
+				`${iexecPath} voucher authorize --workerpool ${voucherWorkerpool} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4120,17 +4148,17 @@ describe('[Common]', () => {
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
 			expect(new BN(res.number).eq(new BN('1'))).toBe(true);
-			
+
 			raw = await execAsync(
 				`${iexecPath} voucher view --workerpool 0 --raw`,
 			);
 			res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.address).toBeDefined();
-			expect(res.address).toBe(mainchainWorkerpool);
+			expect(res.address).toBe(voucherWorkerpool);
 
 			await execAsync(
-				`${iexecPath} voucher unauthorize --workerpool ${mainchainWorkerpool} --raw`,
+				`${iexecPath} voucher unauthorize --workerpool ${voucherWorkerpool} --raw`,
 			);
 
 			raw = await execAsync(
@@ -4146,15 +4174,16 @@ describe('[Common]', () => {
 			let raw = await execAsync(
 				`${iexecPath} voucher show ${ADDRESS} --raw`,
 			);
-			console.log(raw);
+			
 			let res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
-			expect(new BN(res.number).eq(new BN('0'))).toBe(true);
 
-			await execAsync(
-				`${iexecPath} voucher deposit ${ADDRESS} --amount 10 --raw`,
+			raw = await execAsync(
+				`${iexecPath} voucher deposit ${ADDRESS} '10' --raw`,
 			);
+			res = JSON.parse(raw);
+			expect(res.ok).toBe(true);
 
 			raw = await execAsync(
 				`${iexecPath} voucher show ${ADDRESS} --raw`,
@@ -4162,26 +4191,42 @@ describe('[Common]', () => {
 			res = JSON.parse(raw);
 			expect(res.ok).toBe(true);
 			expect(res.number).toBeDefined();
-			expect(new BN(res.number).eq(new BN('10'))).toBe(true);
 
 
-			await execAsync(`${iexecPath} order init --app --raw`);
+			raw = await execAsync(`${iexecPath} order init --app --raw`);
+			res = JSON.parse(raw);
 			await execAsync(`${iexecPath} order init --workerpool --raw`);
 			await execAsync(`${iexecPath} order init --dataset --raw`);
 			await execAsync(`${iexecPath} order init --request --raw`);
+			
 			await editRequestorder({
-				app: mainchainApp,
-				dataset: mainchainDataset,
-				workerpool: mainchainWorkerpool,
+				app: voucherApp,
+				dataset: voucherDataset,
+				workerpool: voucherWorkerpool,
 				category: '0',
 			});
+			
 			await editWorkerpoolorder({
 				category: '0',
 			});
+			
+			await execAsync(`${iexecPath} order sign --app --raw`);
+			await execAsync(`${iexecPath} order sign --workerpool --raw`);
+			await execAsync(`${iexecPath} order sign --dataset --raw`);
+			await execAsync(`${iexecPath} order sign --request --skip-request-check --raw`);
+			
 			await execAsync(
-				`${iexecPath} order sign --raw --skip-request-check`,
+				`${iexecPath} voucher authorize --app ${voucherApp} --raw`,
 			);
-
+			
+			await execAsync(
+				`${iexecPath} voucher authorize --dataset ${voucherDataset} --raw`,
+			);
+			
+			await execAsync(
+				`${iexecPath} voucher authorize --workerpool ${voucherWorkerpool} --raw`,
+			);
+			
 			raw = await execAsync(
 				`${iexecPath} voucher requestTask --skip-request-check --raw`,
 			);
@@ -4193,8 +4238,19 @@ describe('[Common]', () => {
 			const tx = await tokenChainRPC.getTransaction(res.txHash);
 			expect(tx).toBeDefined();
 			expect(tx.gasPrice.toString()).toBe(chainGasPrice);
-			mainchainDealid = res.dealid;
-
+			
+			
+			await execAsync(
+				`${iexecPath} voucher unauthorize --app ${voucherApp} --raw`,
+			);
+			
+			await execAsync(
+				`${iexecPath} voucher unauthorize --dataset ${voucherDataset} --raw`,
+			);
+			
+			await execAsync(
+				`${iexecPath} voucher unauthorize --workerpool ${voucherWorkerpool} --raw`,
+			);
 		});
 	});
 

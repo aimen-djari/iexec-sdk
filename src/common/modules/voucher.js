@@ -1,26 +1,19 @@
 const Debug = require('debug');
-const { Buffer } = require('buffer');
 const BN = require('bn.js');
 const {
 	ethersBnToBn,
 	checkEvent,
-	bnifyNestedEthersBn,
 	getEventFromLogs,
-	cleanRPC,
-	NULL_BYTES32,
-	NULL_BYTES,
 } = require('../utils/utils');
 const {
 	addressSchema,
-	uint256Schema,
-	bytes32Schema,
+	positiveIntSchema,
 	signedApporderSchema,
 	signedDatasetorderSchema,
 	signedWorkerpoolorderSchema,
 	signedRequestorderSchema,
 	throwIfMissing
 } = require('../utils/validator');
-const { ObjectNotFoundError } = require('../utils/errors');
 const { wrapCall, wrapSend, wrapWait } = require('../utils/errorWrappers');
 const order = require('./order');
 
@@ -39,7 +32,7 @@ const deposit = async (
 ) => {
 	try {
 		const vAddress = await addressSchema().validate(address);
-		const vAmount = await uint256Schema().validate(amount);
+		const vAmount = await positiveIntSchema().validate(amount);
 		const iexecContract = contracts.getIExecContract();
 		const tx = await wrapSend(
 			iexecContract.depositVoucherFor(
@@ -125,11 +118,6 @@ const requestTask = async (
 			order.REQUEST_ORDER,
 			vRequestOrder,
 		);
-		
-		console.log(appOrderStruct);
-		console.log(datasetOrderStruct);
-		console.log(workerpoolOrderStruct);
-		console.log(requestOrderStruct);
 		
 		const iexecContract = contracts.getIExecContract();
 		const tx = await wrapSend(
@@ -276,7 +264,6 @@ const addApp = async (
 ) => {
 	try {
 		const vAddress = await addressSchema().validate(address);
-		console.log(vAddress);
 		const iexecContract = contracts.getIExecContract();
 		const id = await wrapCall(iexecContract.authorizeApp(vAddress));
 

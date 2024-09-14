@@ -350,7 +350,6 @@ const option = {
   countAppCharacteristics: () => ['--app', 'count authorized apps'],
   countDatasetCharacteristics: () => ['--dataset', 'count authorized datasets'],
   countWorkerpoolCharacteristics: () => ['--workerpool', 'count authorized workerpools'],
-  amount: () => ['--amount', 'deposit given amount in voucher'],
 };
 
 const orderOption = {

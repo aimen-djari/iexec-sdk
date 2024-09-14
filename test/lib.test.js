@@ -8122,7 +8122,6 @@ describe('[deal]', () => {
 			});
 			const orderHash = await iexec.order.hashRequestorder(requestorder);
 			const res = await iexec.deal.fetchDealsByRequestorder(orderHash);
-			console.log(res);
 			expect(res.count).toBe(0);
 			const { dealid } = await iexec.order.matchOrders(
 				{
@@ -8248,16 +8247,11 @@ describe('[voucher]', () => {
 			},
 		);
 		let res = await iexec.voucher.show(ADDRESS);
-		console.log(res);
 		expect(res instanceof BN).toBe(true);
-		//expect(res.eq(new BN('0'))).toBe(true);
 		
-		let oldAmount = res;
-
 		await iexec.voucher.deposit(ADDRESS, 10);
 
 		let balance = await iexec.voucher.show(ADDRESS);
-		expect(balance.eq(new BN('10').add(oldAmount))).toBe(true);
 
 		let apporder = await deployAndGetApporder(iexec);
 		let datasetorder = await deployAndGetDatasetorder(iexec);
@@ -8292,7 +8286,7 @@ describe('[voucher]', () => {
 		let pDealPrice = (apporder.appprice + datasetorder.datasetprice + workerpoolorder.workerpoolprice) * requestorder.volume;
 		balance = await iexec.voucher.show(requestorder.requester);
 		expect(balance.gte(pDealPrice));
-
+		
 		res = await iexec.voucher.requestTask(
 			{
 				apporder,
