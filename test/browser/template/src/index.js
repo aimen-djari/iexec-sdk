@@ -568,6 +568,7 @@ const deployDataset = (iexec) => async () => {
     const { address } = await iexec.dataset.deployDataset({
       owner,
       name,
+      tag: 'SINGLE_DATASET',
       multiaddr,
       checksum,
     });

@@ -1,6 +1,6 @@
 {
   "name": "iexec",
-  "version": "8.6.1",
+  "version": "8.6.1-datapool",
   "description": "iExec SDK",
   "bin": {
     "iexec": "./dist/esm/cli/cmd/iexec.js"
@@ -44,6 +44,12 @@
       "import": "./dist/esm/lib/IExecDatasetModule.js",
       "browser": "./dist/esm/lib/IExecDatasetModule.js",
       "default": "./dist/esm/lib/IExecDatasetModule.js"
+    },
+    "./IExecDatapoolModule": {
+      "types": "./dist/esm/lib/IExecDatapoolModule.d.ts",
+      "import": "./dist/esm/lib/IExecDatapoolModule.js",
+      "browser": "./dist/esm/lib/IExecDatapoolModule.js",
+      "default": "./dist/esm/lib/IExecDatapoolModule.js"
     },
     "./IExecDealModule": {
       "types": "./dist/esm/lib/IExecDealModule.d.ts",

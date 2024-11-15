@@ -13,6 +13,10 @@ import {
   transferDataset,
 } from '../../common/protocol/registries.js';
 import {
+  addDataset,
+  removeDataset,
+} from '../../common/protocol/datapool.js';
+import {
   createDatasetorder,
   signDatasetorder,
 } from '../../common/market/order.js';
@@ -23,7 +27,7 @@ import {
 } from '../../common/market/marketplace.js';
 import { checkWeb3SecretExists } from '../../common/sms/check.js';
 import { pushWeb3Secret } from '../../common/sms/push.js';
-import { NULL_ADDRESS, DATASET } from '../../common/utils/constant.js';
+import { NULL_ADDRESS, DATASET, DATAPOOL } from '../../common/utils/constant.js';
 import {
   generateAes256Key,
   encryptAes256Cbc,
@@ -689,6 +693,108 @@ transfer
             to,
             txHash,
           },
+        },
+      );
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+  const addToDatapool = cli.command('join-datapool [address]');
+addGlobalOptions(addToDatapool);
+addWalletLoadOptions(addToDatapool);
+addToDatapool
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .description(desc.joinObj(DATAPOOL))
+  .action(async (cliAddress, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const txOptions = await computeTxOptions(opts);
+
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      
+      await connectKeystore(chain, keystore, { txOptions });
+
+      const datapoolNftAddress = cliAddress;
+      const datasetAddress = await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        );
+
+      if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      spinner.start(info.joining(DATAPOOL));
+
+      const { dataset, txHash } = await addDataset(
+        chain.contracts,
+        datapoolNftAddress,
+        datasetAddress,
+      );
+
+      spinner.succeed(
+        `Dataset joined datapool ${datapoolNftAddress} details:${pretty({
+          dataset, txHash,
+        })}`,
+        {
+          raw: { address: dataset, hash: txHash },
+        },
+      );
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+  const removeFromDatapool = cli.command('leave-datapool [address]');
+addGlobalOptions(removeFromDatapool);
+addWalletLoadOptions(removeFromDatapool);
+removeFromDatapool
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .description(desc.leaveObj(DATAPOOL))
+  .action(async (cliAddress, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    
+
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const txOptions = await computeTxOptions(opts);
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      await connectKeystore(chain, keystore, { txOptions });
+      const datapoolNftAddress = cliAddress;
+      const datasetAddress = await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        );
+
+      if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      spinner.start(info.leaving(DATAPOOL));
+
+      const { dataset, txHash } = await removeDataset(
+        chain.contracts,
+        datapoolNftAddress,
+        datasetAddress,
+      );
+
+      spinner.succeed(
+        `Dataset left datapool ${datapoolNftAddress} details:${pretty({
+          dataset, txHash,
+        })}`,
+        {
+          raw: { address: dataset, hash: txHash },
         },
       );
     } catch (error) {

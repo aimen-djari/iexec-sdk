@@ -5,6 +5,7 @@ import IExecModule from './IExecModule.js';
 import IExecAccountModule from './IExecAccountModule.js';
 import IExecAppModule from './IExecAppModule.js';
 import IExecDatasetModule from './IExecDatasetModule.js';
+import IExecDatapoolModule from './IExecDatapoolModule.js';
 import IExecDealModule from './IExecDealModule.js';
 import IExecENSModule from './IExecENSModule.js';
 import IExecHubModule from './IExecHubModule.js';
@@ -34,6 +35,10 @@ export default class IExec extends IExecModule {
    * dataset module
    */
   dataset: IExecDatasetModule;
+  /**
+   * datapool module
+   */
+  dataset: IExecDatapoolModule;
   /**
    * deal module
    */

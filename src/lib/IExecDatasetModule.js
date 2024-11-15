@@ -8,6 +8,10 @@ import {
   checkDeployedDataset,
   transferDataset,
 } from '../common/protocol/registries.js';
+import {
+  addDataset,
+  removeDataset,
+} from '../common/protocol/datapool.js';
 import { checkWeb3SecretExists } from '../common/sms/check.js';
 import { pushWeb3Secret } from '../common/sms/push.js';
 import {
@@ -27,6 +31,12 @@ export default class IExecDatasetModule extends IExecModule {
       sha256Sum(encryptedFile);
     this.deployDataset = async (dataset) =>
       deployDataset(await this.config.resolveContractsClient(), dataset);
+
+    this.addToDatapool = async (datapoolNftAddress, datasetAddress) =>
+    addDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.removeFromDatapool = async (datapoolNftAddress, datasetAddress) =>
+    removeDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+
     this.showDataset = async (address) =>
       showDataset(await this.config.resolveContractsClient(), address);
     this.showUserDataset = async (index, userAddress) =>

@@ -89,6 +89,8 @@ cli.command('app', 'manage iExec apps');
 
 cli.command('dataset', 'manage iExec datasets');
 
+cli.command('datapool', 'manage iExec datapools');
+
 cli.command('workerpool', 'manage iExec workerpools');
 
 cli.command('requester', 'commands for the requester');

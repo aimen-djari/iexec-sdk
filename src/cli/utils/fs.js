@@ -102,6 +102,7 @@ const deployedConfSchema = () =>
   object({
     app: deployedObjSchema().notRequired(),
     dataset: deployedObjSchema().notRequired(),
+    datapool: deployedObjSchema().notRequired(),
     workerpool: deployedObjSchema().notRequired(),
   })
     .noUnknown(true, 'Unknown key "${unknown}"')

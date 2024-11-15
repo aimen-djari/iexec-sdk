@@ -65,9 +65,17 @@ export const buyConf = {
 export const dataset = {
   owner: '0x0000000000000000000000000000000000000000',
   name: 'my-dataset',
+  tag: 'SINGLE_DATASET',
   multiaddr: '/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
   checksum:
     '0x0000000000000000000000000000000000000000000000000000000000000000',
+};
+
+export const datapool = {
+  owner: '0x0000000000000000000000000000000000000000',
+  name: 'OpenDatapool',
+  tag: 'DATAPOOL',
+  multiaddr: '0x0000000000000000000000000000000000000000',
 };
 
 export const compatibleDapp = {
@@ -162,6 +170,7 @@ export const overwriteObject = (obj, overwrite = {}) => ({
 export default {
   app,
   dataset,
+  datapool,
   workerpool,
   category,
 };

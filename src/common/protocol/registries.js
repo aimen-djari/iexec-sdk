@@ -20,7 +20,7 @@ import {
   hexToBuffer,
   BN,
 } from '../utils/utils.js';
-import { APP, DATASET, WORKERPOOL } from '../utils/constant.js';
+import { APP, DATASET, DATAPOOL, WORKERPOOL } from '../utils/constant.js';
 import { wrapCall, wrapSend, wrapWait } from '../utils/errorWrappers.js';
 import { ObjectNotFoundError } from '../utils/errors.js';
 
@@ -77,6 +77,7 @@ const toUpperFirst = (str) => ''.concat(str[0].toUpperCase(), str.substr(1));
 const createArgs = {
   [APP]: ['owner', 'name', 'type', 'multiaddr', 'checksum', 'mrenclave'],
   [DATASET]: ['owner', 'name', 'multiaddr', 'checksum'],
+  [DATAPOOL]: ['owner', 'name', 'multiaddr', 'checksum'],
   [WORKERPOOL]: ['owner', 'description'],
 };
 
@@ -162,6 +163,11 @@ export const deployDataset = async (contracts, dataset) =>
   deployObj(DATASET)(
     contracts,
     await datasetSchema({ ethProvider: contracts.provider }).validate(dataset),
+  );
+  export const deployDatapool = async (contracts, datapool) =>
+  deployObj(DATAPOOL)(
+    contracts,
+    await datasetSchema({ ethProvider: contracts.provider }).validate(datapool),
   );
 export const deployWorkerpool = async (contracts, workerpool) =>
   deployObj(WORKERPOOL)(
@@ -369,6 +375,25 @@ export const showDataset = async (
   datasetAddress = throwIfMissing(),
 ) => {
   const { obj, objAddress } = await showObjByAddress(DATASET)(
+    contracts,
+    await addressSchema({ ethProvider: contracts.provider }).validate(
+      datasetAddress,
+    ),
+  );
+  const clean = Object.assign(
+    cleanObj(obj),
+    obj.m_datasetMultiaddr && {
+      datasetMultiaddr: multiaddrHexToHuman(obj.m_datasetMultiaddr),
+    },
+  );
+  return { objAddress, dataset: clean };
+};
+
+export const showDatapool = async (
+  contracts = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+) => {
+  const { obj, objAddress } = await showObjByAddress(DATAPOOL)(
     contracts,
     await addressSchema({ ethProvider: contracts.provider }).validate(
       datasetAddress,

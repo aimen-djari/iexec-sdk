@@ -45,3 +45,4 @@ dist/**
 IExec*/**
 utils/**
 errors/**
+/.project

@@ -62,6 +62,22 @@ const sources = [
     { dir: '@iexec/poco', minifier: minifiers.contract },
   ],
   [
+    '@iexec/poco/build/contracts-min/AbstractDatapool.json',
+    { dir: '@iexec/poco', minifier: minifiers.contract },
+  ],
+  [
+    '@iexec/poco/build/contracts-min/OpenDatapool.json',
+    { dir: '@iexec/poco', minifier: minifiers.contract },
+  ],
+  [
+    '@iexec/poco/build/contracts-min/WaitingListDatapool.json',
+    { dir: '@iexec/poco', minifier: minifiers.contract },
+  ],
+  [
+    '@iexec/poco/build/contracts-min/WhitelistedDatapool.json',
+    { dir: '@iexec/poco', minifier: minifiers.contract },
+  ],
+  [
     '@ensdomains/ens-contracts/artifacts/contracts/registry/ENSRegistry.sol/ENSRegistry.json',
     { dir: '@ensdomains/registry', minifier: minifiers.contract },
   ],

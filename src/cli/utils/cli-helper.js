@@ -13,6 +13,7 @@ import {
 import {
   TEE_FRAMEWORKS,
   STORAGE_PROVIDERS,
+  DATAPOOL_IMPLEMENTATION,
 } from '../../common/utils/constant.js';
 import packageJSON, { version } from '../../common/generated/sdk/package.js';
 
@@ -75,6 +76,9 @@ export const info = {
   cancelling: (obj) => `Cancelling ${obj}...`,
   deploying: (obj) => `Deploying ${obj}...`,
   showing: (obj) => `Showing ${obj}...`,
+  joining: (obj) => `Joining ${obj}...`,
+  leaving: (obj) => `Leaving ${obj}...`,
+  updating: (obj) => `Updating ${obj}...`,
   counting: (obj) => `Counting ${obj}...`,
   depositing: () => 'Making deposit...',
   checkingSwapRate: () => 'Checking swap rate...',
@@ -105,6 +109,13 @@ export const desc = {
   initObj: (objName) => `init a new ${objName}`,
   deployObj: (objName) => `deploy a new ${objName}`,
   createObj: (objName) => `create a new ${objName}`,
+  addAppObj: (objName) => `add an allowed app to ${objName}`,
+  addObj: (objName, obj) => `add allowed ${obj} to ${objName}`,
+  checkObj: (objName, obj) => `check if ${obj} is allowed in ${objName}`,
+  setPriceObj: (objName, priceObj) => `set ${priceObj} price of ${objName}`,
+  createTaskObj: (objName) => `create a ${objName} task`,
+  joinObj: (objName) => `join a ${objName}`,
+  leaveObj: (objName) => `leave a ${objName}`,
   publishObj: (objName) =>
     `publish a ${objName}order on the marketplace to make the ${objName} publicly available (use options to set custom usage restriction)`,
   unpublishObj: (objName) =>
@@ -381,6 +392,30 @@ export const option = {
   isRequesterStrict: () => [
     '--requester-strict',
     'fetch orders created strictly for the specified requester',
+  ],
+  datapoolImplementation: () => [
+    '--implementation <implementation>',
+    `specify the implementation (<${listOfChoices(Object.values(DATAPOOL_IMPLEMENTATION))}>) to use to creation the datapool`,
+  ],
+  datapoolOwnerPrice: () => [
+    '--datapool-owner-price <price>',
+    'Set the fee for the datapool owner.',
+  ],
+  datasetPrice: () => [
+      '--dataset-price <price>',
+      'Set the fee for each dataset in the datapool.',
+  ],
+  appRestrict: () => [
+      '--app-restrict <list>',
+      'Restrict the datapool to certain apps. Only specific apps will be able to interact with the datapool.',
+  ],
+  workerpoolRestrict: () => [
+      '--workerpool-restrict <list>',
+      'Restrict the datapool to certain workerpools. Only specific workerpools will be able to interact with the datapool.',
+  ],
+  whitelist: () => [
+      '--whitelist <list>',
+      'Define which datasets are allowed to join the datapool. Only whitelisted datasets can be added to the pool. Only works with a specific implementation (WhitelistedDatapool).',
   ],
 };
 

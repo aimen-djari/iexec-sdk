@@ -683,7 +683,7 @@ export const datasetSchema = (opt) =>
   object({
     owner: addressSchema(opt).required(),
     name: string().required(),
-    multiaddr: multiaddressSchema().required(),
+    multiaddr: multiaddressSchema().required() || addressSchema(opt).required(),
     checksum: bytes32Schema().required(),
   });
 
@@ -698,6 +698,16 @@ export const categorySchema = () =>
     name: string().required(),
     description: string().required(),
     workClockTimeRef: uint256Schema().required(),
+  });
+
+export const datapoolSchema = () =>
+  object({
+    implementation: string().required(),
+    datapoolOwnerPrice: uint256Schema().required(),
+    datasetPrice: uint256Schema().required(),
+    allowedApps: array().of(string()).required(),
+    allowedWorkerpools: array().of(string()).required(),
+    whitelist: array().of(string()),
   });
 
 export const fileBufferSchema = () =>

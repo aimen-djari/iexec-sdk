@@ -12,6 +12,14 @@ import workerpoolDesc from '../generated/@iexec/poco/Workerpool.js';
 import datasetDesc from '../generated/@iexec/poco/Dataset.js';
 import rlcDesc from '../generated/@iexec/rlc/RLC.js';
 import erlcDesc from '../generated/@iexec/erlc/ERLCTokenSwap.js';
+import abstractDatapoolDesc from '../generated/@iexec/poco/AbstractDatapool.js';
+import openDatapoolDesc from '../generated/@iexec/poco/OpenDatapool.js';
+import waitingListDatapoolDesc from '../generated/@iexec/poco/WaitingListDatapool.js';
+import whitelistedDatapoolDesc from '../generated/@iexec/poco/WhitelistedDatapool.js';
+
+import {
+  DATAPOOL_IMPLEMENTATION,
+} from './constant.js';
 
 const debug = Debug('iexec:IExecContractsClient');
 
@@ -84,9 +92,29 @@ const getContractsDescMap = (isNative, flavour) => ({
     contractDesc: datasetDesc,
     registryName: 'datasetRegistry',
   },
+  datapool: {
+    contractDesc: datasetDesc,
+    registryName: 'datasetRegistry',
+  },
   datasetRegistry: {
     contractDesc: datasetRegistryDesc,
     hubPropName: 'datasetregistry',
+  },
+  [DATAPOOL_IMPLEMENTATION.ABSTRACT]: {
+    contractDesc: abstractDatapoolDesc,
+    hubPropName: '',
+  },
+  [DATAPOOL_IMPLEMENTATION.OPEN]: {
+    contractDesc: openDatapoolDesc,
+    hubPropName: '',
+  },
+  [DATAPOOL_IMPLEMENTATION.WAITINGLIST]: {
+    contractDesc: waitingListDatapoolDesc,
+    hubPropName: '',
+  },
+  [DATAPOOL_IMPLEMENTATION.WHITELIST]: {
+    contractDesc: whitelistedDatapoolDesc,
+    hubPropName: '',
   },
   workerpool: {
     contractDesc: workerpoolDesc,

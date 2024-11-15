@@ -8,7 +8,7 @@ import { join } from 'path';
 import BN from 'bn.js';
 import { execAsync } from './test-utils';
 import { bytes32Regex } from '../src/common/utils/utils';
-import { TEE_FRAMEWORKS } from '../src/common/utils/constant';
+import { DATAPOOL_IMPLEMENTATION, TEE_FRAMEWORKS } from '../src/common/utils/constant';
 
 const { readFile, writeFile, pathExists, remove } = fsExtra;
 
@@ -285,6 +285,7 @@ const editOrder = (orderName) => async (override) => {
 const editRequestorder = async ({
   app,
   dataset,
+  datasetmaxprice,
   workerpool,
   category,
   volume,
@@ -293,6 +294,7 @@ const editRequestorder = async ({
   editOrder('requestorder')({
     app,
     dataset,
+    datasetmaxprice,
     workerpool,
     category,
     volume,
@@ -423,6 +425,8 @@ describe('[cli]', () => {
 describe('[Mainchain]', () => {
   let mainchainApp;
   let mainchainDataset;
+  let mainchainDatapool;
+  let mainchainDatapoolContract;
   let mainchainWorkerpool;
   let mainchainNoDurationCatid;
   let mainchainDealid;
@@ -1074,6 +1078,260 @@ describe('[Mainchain]', () => {
     expect(res.count).not.toBe('0');
   });
 
+  // DATAPOOL
+  test('[common] iexec datapool init (no wallet)', async () => {
+    await removeWallet();
+    const raw = await execAsync(`${iexecPath} datapool init --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapool).toBeDefined();
+    expect(res.datapool.owner).not.toBe(ADDRESS);
+  });
+
+  test('[common] iexec datapool init (+ wallet)', async () => {
+    await setRichWallet();
+    const raw = await execAsync(`${iexecPath} datapool init --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapool).toBeDefined();
+    expect(res.datapool.owner).toBe(ADDRESS);
+  });
+
+  test('[mainchain] iexec datapool deploy', async () => {
+    await setRichWallet();
+    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolNftAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    const tx = await tokenChainRPC.getTransaction(res.txHash);
+    expect(tx).toBeDefined();
+    mainchainDatapool = res.datapoolNftAddress;
+    mainchainDatapoolContract = res.datapoolAddress;
+  });
+
+  test('[mainchain] iexec datapool show (from deployed.json)', async () => {
+    const raw = await execAsync(`${iexecPath} datapool show --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolState).toBeDefined();
+    expect(res.datapoolAddress).toBe(mainchainDatapoolContract);
+    expect(res.datapoolState.datapoolOwner).toBe(ADDRESS);
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+    expect(res.datapoolState.allowedAppCount).toBe('infinite');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+    expect(res.datapoolState.datasets).toEqual([]);
+  });
+
+  test('[mainchain] iexec datapool show [datapoolAddress]', async () => {
+    await execAsync('mv deployed.json deployed.back');
+    const raw = await execAsync(
+      `${iexecPath} datapool show ${mainchainDatapool} --raw`,
+    );
+    await execAsync('mv deployed.back deployed.json');
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolState).toBeDefined();
+    expect(res.datapoolAddress).toBe(mainchainDatapoolContract);
+    expect(res.datapoolState.datapoolOwner).toBe(ADDRESS);
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+    expect(res.datapoolState.allowedAppCount).toBe('infinite');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+    expect(res.datapoolState.datasets).toEqual([]);
+  });
+
+  test('[mainchain] iexec datapool add-allowed-app [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool add-allowed-app ${mainchainApp} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.app).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    expect(res.app).toBe(mainchainApp);
+    expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.allowedAppCount).toBe('1');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+  });
+
+  test('[mainchain] iexec datapool check-allowed-app [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool check-allowed-app ${mainchainApp} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.app).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.appAllowed).toBeDefined();
+    expect(res.app).toBe(mainchainApp);
+    expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
+    expect(res.appAllowed).toBe(true);
+  });
+
+  test('[mainchain] iexec datapool add-allowed-workerpool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool add-allowed-workerpool ${mainchainWorkerpool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.workerpool).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    expect(res.workerpool).toBe(mainchainWorkerpool);
+    expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.allowedAppCount).toBe('1');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('1');
+  });
+
+  test('[mainchain] iexec datapool check-allowed-workerpool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool check-allowed-workerpool ${mainchainWorkerpool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.workerpool).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.workerpoolAllowed).toBeDefined();
+    expect(res.workerpool).toBe(mainchainWorkerpool);
+    expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
+    expect(res.workerpoolAllowed).toBe(true);
+  });
+
+  test('[mainchain] iexec datapool set-datapool-owner-price [price]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool set-datapool-owner-price 1 --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolOwnerPrice).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('1');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+  });
+
+  test('[mainchain] iexec datapool set-dataset-price [price]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool set-dataset-price 1 --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datasetPrice).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('1');
+    expect(res.datapoolState.currentDatasetPrice).toBe('1');
+  });
+
+  test('[mainchain] iexec dataset join-datapool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} dataset join-datapool ${mainchainDatapool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.address).toBeDefined();
+    expect(res.hash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    expect(res.datapoolState.activeDatasetCount).toBe('1');
+    expect(res.datapoolState.datasets).toEqual([`${mainchainDataset}: active`]);
+  });
+
+  test('[mainchain] iexec datapool create-task [address]', async () => {
+    let raw = await execAsync(`${iexecPath} order init --raw`);
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBe(mainchainApp);
+    expect(res.workerpoolorder.workerpool).toBe(mainchainWorkerpool);
+    expect(res.requestorder.requester).toBe(ADDRESS);
+    expect(res.requestorder.beneficiary).toBe(ADDRESS);
+    
+    await editRequestorder({
+      app: mainchainApp,
+      dataset: mainchainDatapool,
+      workerpool: mainchainWorkerpool,
+      category: mainchainNoDurationCatid,
+      datasetmaxprice: 2,
+    });
+    await editWorkerpoolorder({
+      category: mainchainNoDurationCatid,
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBeDefined();
+    expect(res.workerpoolorder.workerpool).toBeDefined();
+    expect(res.requestorder.app).toBeDefined();
+
+    raw = await execAsync(
+      `${iexecPath} datapool create-task ${mainchainDatapool} --skip-preflight-check --raw`,
+    );
+
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.taskid).toBeDefined();
+    expect(res.taskid).toMatch(bytes32Regex);
+  });
+
+  test('[mainchain] iexec dataset leave-datapool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} dataset leave-datapool ${mainchainDatapool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.address).toBeDefined();
+    expect(res.hash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
+  });
+  
   // CATEGORY
   test('[common] iexec category init', async () => {
     await setRichWallet();
@@ -2512,6 +2770,8 @@ describe('[Mainchain]', () => {
 describe('[Sidechain]', () => {
   let sidechainApp;
   let sidechainDataset;
+  let sidechainDatapool;
+  let sidechainDatapoolContract;
   let sidechainWorkerpool;
   let sidechainNoDurationCatid;
   let sidechainDealid;
@@ -2904,6 +3164,260 @@ describe('[Sidechain]', () => {
     expect(res.ok).toBe(true);
     expect(res.count).toBeDefined();
     expect(res.count).not.toBe('0');
+  });
+
+  // DATAPOOL
+  test('[common] iexec datapool init (no wallet)', async () => {
+    await removeWallet();
+    const raw = await execAsync(`${iexecPath} datapool init --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapool).toBeDefined();
+    expect(res.datapool.owner).not.toBe(ADDRESS);
+  });
+
+  test('[common] iexec datapool init (+ wallet)', async () => {
+    await setRichWallet();
+    const raw = await execAsync(`${iexecPath} datapool init --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapool).toBeDefined();
+    expect(res.datapool.owner).toBe(ADDRESS);
+  });
+
+  test('[sidechain] iexec datapool deploy', async () => {
+    await setRichWallet();
+    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolNftAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    const tx = await tokenChainRPC.getTransaction(res.txHash);
+    expect(tx).toBeDefined();
+    sidechainDatapool = res.datapoolNftAddress;
+    sidechainDatapoolContract = res.datapoolAddress;
+  });
+
+  test('[sidechain] iexec datapool show (from deployed.json)', async () => {
+    const raw = await execAsync(`${iexecPath} datapool show --raw`);
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolState).toBeDefined();
+    expect(res.datapoolAddress).toBe(sidechainDatapoolContract);
+    expect(res.datapoolState.datapoolOwner).toBe(ADDRESS);
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+    expect(res.datapoolState.allowedAppCount).toBe('infinite');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+    expect(res.datapoolState.datasets).toEqual([]);
+  });
+
+  test('[sidechain] iexec datapool show [datapoolAddress]', async () => {
+    await execAsync('mv deployed.json deployed.back');
+    const raw = await execAsync(
+      `${iexecPath} datapool show ${sidechainDatapool} --raw`,
+    );
+    await execAsync('mv deployed.back deployed.json');
+    const res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolAddress).toBeDefined();
+    expect(res.datapoolState).toBeDefined();
+    expect(res.datapoolAddress).toBe(sidechainDatapoolContract);
+    expect(res.datapoolState.datapoolOwner).toBe(ADDRESS);
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+    expect(res.datapoolState.allowedAppCount).toBe('infinite');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+    expect(res.datapoolState.datasets).toEqual([]);
+  });
+
+  test('[sidechain] iexec datapool add-allowed-app [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool add-allowed-app ${sidechainApp} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.app).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    expect(res.app).toBe(sidechainApp);
+    expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.allowedAppCount).toBe('1');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('infinite');
+  });
+
+  test('[sidechain] iexec datapool check-allowed-app [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool check-allowed-app ${sidechainApp} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.app).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.appAllowed).toBeDefined();
+    expect(res.app).toBe(sidechainApp);
+    expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
+    expect(res.appAllowed).toBe(true);
+  });
+
+  test('[sidechain] iexec datapool add-allowed-workerpool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool add-allowed-workerpool ${sidechainWorkerpool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.workerpool).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+    expect(res.workerpool).toBe(sidechainWorkerpool);
+    expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.allowedAppCount).toBe('1');
+    expect(res.datapoolState.allowedWorkerpoolCount).toBe('1');
+  });
+
+  test('[sidechain] iexec datapool check-allowed-workerpool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool check-allowed-workerpool ${sidechainWorkerpool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.workerpool).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.workerpoolAllowed).toBeDefined();
+    expect(res.workerpool).toBe(sidechainWorkerpool);
+    expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
+    expect(res.workerpoolAllowed).toBe(true);
+  });
+
+  test('[sidechain] iexec datapool set-datapool-owner-price [price]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool set-datapool-owner-price 1 --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolOwnerPrice).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('1');
+    expect(res.datapoolState.currentDatasetPrice).toBe('0');
+  });
+
+  test('[sidechain] iexec datapool set-dataset-price [price]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} datapool set-dataset-price 1 --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datasetPrice).toBeDefined();
+    expect(res.datapoolContractAddress).toBeDefined();
+    expect(res.txHash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice).toBe('0');
+    expect(res.datapoolState.minimalDatasetPrice).toBe('0');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toBe('1');
+    expect(res.datapoolState.currentDatasetPrice).toBe('1');
+  });
+
+  test('[sidechain] iexec dataset join-datapool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} dataset join-datapool ${sidechainDatapool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.address).toBeDefined();
+    expect(res.hash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    expect(res.datapoolState.activeDatasetCount).toBe('1');
+    expect(res.datapoolState.datasets).toEqual([`${sidechainDataset}: active`]);
+  });
+
+  test('[sidechain] iexec datapool create-task [address]', async () => {
+    let raw = await execAsync(`${iexecPath} order init --raw`);
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBe(sidechainApp);
+    expect(res.workerpoolorder.workerpool).toBe(sidechainWorkerpool);
+    expect(res.requestorder.requester).toBe(ADDRESS);
+    expect(res.requestorder.beneficiary).toBe(ADDRESS);
+    
+    await editRequestorder({
+      app: sidechainApp,
+      dataset: sidechainDatapool,
+      workerpool: sidechainWorkerpool,
+      category: sidechainNoDurationCatid,
+      datasetmaxprice: 2,
+    });
+    await editWorkerpoolorder({
+      category: sidechainNoDurationCatid,
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBeDefined();
+    expect(res.workerpoolorder.workerpool).toBeDefined();
+    expect(res.requestorder.app).toBeDefined();
+
+    raw = await execAsync(
+      `${iexecPath} datapool create-task ${sidechainDatapool} --skip-preflight-check --raw`,
+    );
+
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.taskid).toBeDefined();
+    expect(res.taskid).toMatch(bytes32Regex);
+  });
+
+  test('[sidechain] iexec dataset leave-datapool [address]', async () => {
+    let raw = await execAsync(
+      `${iexecPath} dataset leave-datapool ${sidechainDatapool} --raw`,
+    );
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.address).toBeDefined();
+    expect(res.hash).toBeDefined();
+
+    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    expect(res.datapoolState.activeDatasetCount).toBe('0');
   });
 
   // CATEGORY

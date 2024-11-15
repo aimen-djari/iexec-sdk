@@ -1,5 +1,6 @@
 export const APP = 'app';
 export const DATASET = 'dataset';
+export const DATAPOOL = 'datapool';
 export const WORKERPOOL = 'workerpool';
 export const REQUEST = 'request';
 export const APP_ORDER = 'apporder';
@@ -34,6 +35,12 @@ export const TEE_FRAMEWORKS = {
 export const STORAGE_PROVIDERS = {
   IPFS: 'ipfs',
   DROPBOX: 'dropbox',
+};
+
+export const DATAPOOL_IMPLEMENTATION = {
+  OPEN: 'OpenDatapool',
+  WAITINGLIST: 'WaitingListDatapool',
+  WHITELIST: 'WhitelistedDatapool',
 };
 
 export const IEXEC_REQUEST_PARAMS = {

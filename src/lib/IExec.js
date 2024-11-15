@@ -2,6 +2,7 @@ import IExecModule from './IExecModule.js';
 import IExecAccountModule from './IExecAccountModule.js';
 import IExecAppModule from './IExecAppModule.js';
 import IExecDatasetModule from './IExecDatasetModule.js';
+import IExecDatapoolModule from './IExecDatapoolModule.js';
 import IExecDealModule from './IExecDealModule.js';
 import IExecENSModule from './IExecENSModule.js';
 import IExecHubModule from './IExecHubModule.js';
@@ -23,6 +24,7 @@ export default class IExec extends IExecModule {
     this.account = IExecAccountModule.fromConfig(this.config);
     this.app = IExecAppModule.fromConfig(this.config);
     this.dataset = IExecDatasetModule.fromConfig(this.config);
+    this.datapool = IExecDatapoolModule.fromConfig(this.config);
     this.workerpool = IExecWorkerpoolModule.fromConfig(this.config);
     this.hub = IExecHubModule.fromConfig(this.config);
     this.deal = IExecDealModule.fromConfig(this.config);

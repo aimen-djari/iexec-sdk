@@ -10,7 +10,7 @@ import { execAsync } from './test-utils';
 
 import { utils, IExec, errors } from '../src/lib';
 import { sleep, bytes32Regex, addressRegex } from '../src/common/utils/utils';
-import { TEE_FRAMEWORKS } from '../src/common/utils/constant';
+import { DATAPOOL_IMPLEMENTATION, TEE_FRAMEWORKS } from '../src/common/utils/constant';
 
 const { NULL_ADDRESS } = utils;
 const { readFile, ensureDir, writeFile } = fsExtra;
@@ -281,6 +281,7 @@ const deployRandomDataset = async (iexec, { owner } = {}) =>
   iexec.dataset.deployDataset({
     owner: owner || (await iexec.wallet.getAddress()),
     name: `dataset${getId()}`,
+    tag: 'SINGLE_DATASET',
     multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
     checksum:
       '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -518,6 +519,7 @@ describe('[workflow]', () => {
     const datasetDeployRes = await iexec.dataset.deployDataset({
       owner,
       name: datasetName,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3474,6 +3476,7 @@ describe('[dataset]', () => {
     const dataset = {
       owner: await iexec.wallet.getAddress(),
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3503,6 +3506,7 @@ describe('[dataset]', () => {
     const dataset = {
       owner: await iexec.wallet.getAddress(),
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3528,6 +3532,7 @@ describe('[dataset]', () => {
     const dataset = {
       owner: await iexec.wallet.getAddress(),
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3602,6 +3607,7 @@ describe('[dataset]', () => {
     const dataset = {
       owner: await iexec.wallet.getAddress(),
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3660,6 +3666,7 @@ describe('[dataset]', () => {
     const dataset = {
       owner: userAddress,
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3699,6 +3706,7 @@ describe('[dataset]', () => {
     const datasetDeployRes = await iexec.dataset.deployDataset({
       owner: await iexec.wallet.getAddress(),
       name: `dataset${getId()}`,
+      tag: 'SINGLE_DATASET',
       multiaddr: '/p2p/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
       checksum:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -3820,6 +3828,306 @@ describe('[dataset]', () => {
     );
     expect(goodTeeRes).toBe(true);
   });
+});
+
+describe('[datapool]', () => {
+
+  const datapoolConf = {
+    implementation: DATAPOOL_IMPLEMENTATION.OPEN,
+    datapoolOwnerPrice: 0,
+    datasetPrice: 0,
+    allowedApps: [],
+    allowedWorkerpools: [],
+  };
+  let datapoolAddress;
+  let datapoolNftAddress;
+  
+  test('datapool.createDatapool()', async () => {
+    
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress: nativeHubAddress,
+        isNative: true,
+        useGas: false,
+      },
+    );
+
+    const res = await iexec.datapool.createDatapool(datapoolConf);
+    expect(res.txHash).toMatch(bytes32Regex);
+    expect(res.datapoolAddress).toMatch(addressRegex);
+    expect(res.datapoolNftAddress).toMatch(addressRegex);
+
+    datapoolAddress = res.datapoolAddress;
+    datapoolNftAddress = res.datapoolNftAddress;
+  });
+
+  test('datapool.showDatapoolState()', async () => {
+    
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    const owner = await iexec.wallet.getAddress();
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolAddress).toBe(datapoolAddress);
+    expect(res.datapoolState.datapoolOwner).toBe(owner);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+    expect(res.datapoolState.minimalDatapoolOwnerPrice.toString()).toEqual(datapoolConf.datapoolOwnerPrice.toString());
+    expect(res.datapoolState.minimalDatasetPrice.toString()).toEqual(datapoolConf.datasetPrice.toString());
+    expect(res.datapoolState.currentDatapoolOwnerPrice.toString()).toEqual(datapoolConf.datapoolOwnerPrice.toString());
+    expect(res.datapoolState.currentDatasetPrice.toString()).toEqual(datapoolConf.datasetPrice.toString());
+    expect(res.datapoolState.allowedAppCount.toString()).toEqual('infinite');
+    expect(res.datapoolState.allowedWorkerpoolCount.toString()).toEqual('infinite');
+
+    await expect(iexec.datapool.showDatapoolState(NULL_ADDRESS)).rejects.toThrow(
+      new errors.ObjectNotFoundError('datapool', NULL_ADDRESS, networkId),
+    );
+
+    res = await iexec.dataset.showDataset(datapoolNftAddress);
+    expect(res.objAddress).toBe(datapoolNftAddress);
+    expect(res.dataset.owner).toBe(datapoolAddress);
+    expect(res.dataset.registry).toMatch(addressRegex);
+    expect(res.dataset.datasetName).toBe(datapoolConf.implementation);
+    expect(res.dataset.datasetMultiaddr).toBe(datapoolAddress);
+
+    await expect(iexec.dataset.showDataset(NULL_ADDRESS)).rejects.toThrow(
+      new errors.ObjectNotFoundError('dataset', NULL_ADDRESS, networkId),
+    );
+  });
+
+  test('datapool.addAllowedApp()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    const { address: appAddress } = await deployRandomApp(iexec);
+
+    let bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(bool).toBe(true);
+
+    await iexec.datapool.addAllowedApp(datapoolNftAddress, appAddress);
+
+    bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(bool).toBe(true);
+  });
+
+  test('datapool.addAllowedWorkerpool()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    const { address: wpAddress } = await deployRandomWorkerpool(iexec);
+
+    let bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
+    expect(bool).toBe(true);
+
+    await iexec.datapool.addAllowedWorkerpool(datapoolNftAddress, wpAddress);
+
+    bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
+    expect(bool).toBe(true);
+  });
+
+  test('datapool.setDatapoolOwnerPrice()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    await iexec.datapool.setDatapoolOwnerPrice(datapoolNftAddress, 1);
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice.toString()).toEqual(datapoolConf.datapoolOwnerPrice.toString());
+    expect(res.datapoolState.minimalDatasetPrice.toString()).toEqual(datapoolConf.datasetPrice.toString());
+    expect(res.datapoolState.currentDatapoolOwnerPrice.toString()).toEqual('1');
+    expect(res.datapoolState.currentDatasetPrice.toString()).toEqual(datapoolConf.datasetPrice.toString());
+    expect(res.datapoolState.allowedAppCount.toString()).toEqual('1');
+    expect(res.datapoolState.allowedWorkerpoolCount.toString()).toEqual('1');
+  });
+
+  test('datapool.setDatasetPrice()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    await iexec.datapool.setDatasetPrice(datapoolNftAddress, 1);
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.minimalDatapoolOwnerPrice.toString()).toEqual(datapoolConf.datapoolOwnerPrice.toString());
+    expect(res.datapoolState.minimalDatasetPrice.toString()).toEqual(datapoolConf.datasetPrice.toString());
+    expect(res.datapoolState.currentDatapoolOwnerPrice.toString()).toEqual('1');
+    expect(res.datapoolState.currentDatasetPrice.toString()).toEqual('1');
+    expect(res.datapoolState.allowedAppCount.toString()).toEqual('1');
+    expect(res.datapoolState.allowedWorkerpoolCount.toString()).toEqual('1');
+  });
+
+  test('dataset.addToDatapool()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    const { address: datasetAddress } = await deployRandomDataset(iexec);
+
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('1');
+    expect(res.datapoolState.datasets).toContain(`${datasetAddress}: active`);
+  });
+
+  test('dataset.removeFromDatapool()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress,
+      },
+    );
+
+    const { address: datasetAddress } = await deployRandomDataset(iexec);
+
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('2');
+
+    await iexec.dataset.removeFromDatapool(datapoolNftAddress, datasetAddress);
+
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('1');
+  });
+
+  test('datapool.createDatapoolTask()', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress: nativeHubAddress,
+        resultProxyURL: 'https://result-proxy.iex.ec',
+        smsURL: smsMap,
+        isNative: true,
+        useGas: false,
+      },
+    );
+
+    const { address: appAddress } = await deployRandomApp(iexec);
+    let order = await iexec.order.createApporder({
+      app: appAddress,
+    });
+
+    const appOrder = await iexec.order.signApporder(order);
+
+    const { address: workerpoolAddress } = await deployRandomWorkerpool(iexec);
+    order = await iexec.order.createWorkerpoolorder({
+      workerpool: workerpoolAddress,
+      category: 0,
+    });
+
+    const workerpoolOrder = await iexec.order.signWorkerpoolorder(order);
+
+    order = await iexec.order.createRequestorder({
+      app: appAddress,
+      workerpool: workerpoolAddress,
+      dataset: datapoolNftAddress,
+      category: 0,
+      datasetmaxprice: 3,
+    });
+
+    const requestOrder = await iexec.order.signRequestorder(order);
+
+    const { address: datasetAddress } = await deployRandomDataset(iexec);
+
+    await iexec.datapool.addAllowedApp(datapoolNftAddress, appAddress);
+    await iexec.datapool.addAllowedWorkerpool(datapoolNftAddress, workerpoolAddress);
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+
+    let bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(bool).toBe(true);
+    bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, workerpoolAddress);
+    expect(bool).toBe(true);
+
+    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.datasets).toContain(`${datasetAddress}: active`);
+    expect(res.datapoolState.activeDatasetCount).toEqual('2');
+    expect(res.datapoolState.currentDatapoolOwnerPrice).toEqual('1');
+    expect(res.datapoolState.currentDatasetPrice).toEqual('1');
+
+    res = await iexec.datapool.createDatapoolTask(datapoolNftAddress, appOrder, workerpoolOrder, requestOrder);
+    expect(res.taskid).toBeDefined();
+    expect(res.taskid).toMatch(bytes32Regex);
+  });
+
 });
 
 describe('[workerpool]', () => {
