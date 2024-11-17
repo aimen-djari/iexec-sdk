@@ -9,6 +9,12 @@ import {
   setDatapoolOwnerPrice,
   setDatasetPrice,
   createDatapoolTask,
+  approveRequestToAddDataset,
+  declineRequestToAddDataset,
+  isDatasetInWaitingList,
+  addDatasetToWhitelist,
+  removeDatasetFromWhitelist,
+  isWhitelistedDataset,
 } from '../common/protocol/datapool.js';
 
 export default class IExecDatapoolModule extends IExecModule {
@@ -37,6 +43,19 @@ export default class IExecDatapoolModule extends IExecModule {
 
     this.createDatapoolTask = async (datapoolNftAddress, appOrder, workerpoolOrder, requestOrder) =>
     createDatapoolTask(await this.config.resolveContractsClient(), datapoolNftAddress, appOrder, workerpoolOrder, requestOrder);
-    
+
+    this.approveRequestToAddDataset = async (datapoolNftAddress, datasetAddress) =>
+    approveRequestToAddDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.declineRequestToAddDataset = async (datapoolNftAddress, datasetAddress) =>
+    declineRequestToAddDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.isDatasetInWaitingList = async (datapoolNftAddress, datasetAddress) =>
+    isDatasetInWaitingList(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+
+    this.addDatasetToWhitelist = async (datapoolNftAddress, datasetAddress) =>
+    addDatasetToWhitelist(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.removeDatasetFromWhitelist = async (datapoolNftAddress, datasetAddress) =>
+    removeDatasetFromWhitelist(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.isWhitelistedDataset = async (datapoolNftAddress, datasetAddress) =>
+    isWhitelistedDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
   }
 }

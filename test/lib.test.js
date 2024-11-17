@@ -3886,7 +3886,7 @@ describe('[datapool]', () => {
     const owner = await iexec.wallet.getAddress();
 
     let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
-    expect(res.datapoolAddress).toBe(datapoolAddress);
+    expect(res.datapoolContractAddress).toBe(datapoolAddress);
     expect(res.datapoolState.datapoolOwner).toBe(owner);
     expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
     expect(res.datapoolState.minimalDatapoolOwnerPrice.toString()).toEqual(datapoolConf.datapoolOwnerPrice.toString());
@@ -3928,13 +3928,13 @@ describe('[datapool]', () => {
 
     const { address: appAddress } = await deployRandomApp(iexec);
 
-    let bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
-    expect(bool).toBe(true);
+    let res = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(res.appAllowed).toBe(true);
 
     await iexec.datapool.addAllowedApp(datapoolNftAddress, appAddress);
 
-    bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
-    expect(bool).toBe(true);
+    res = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(res.appAllowed).toBe(true);
   });
 
   test('datapool.addAllowedWorkerpool()', async () => {
@@ -3953,13 +3953,13 @@ describe('[datapool]', () => {
 
     const { address: wpAddress } = await deployRandomWorkerpool(iexec);
 
-    let bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
-    expect(bool).toBe(true);
+    let res = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
+    expect(res.workerpoolAllowed).toBe(true);
 
     await iexec.datapool.addAllowedWorkerpool(datapoolNftAddress, wpAddress);
 
-    bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
-    expect(bool).toBe(true);
+    res = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, wpAddress);
+    expect(res.workerpoolAllowed).toBe(true);
   });
 
   test('datapool.setDatapoolOwnerPrice()', async () => {
@@ -4112,12 +4112,12 @@ describe('[datapool]', () => {
     await iexec.datapool.addAllowedWorkerpool(datapoolNftAddress, workerpoolAddress);
     await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
 
-    let bool = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
-    expect(bool).toBe(true);
-    bool = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, workerpoolAddress);
-    expect(bool).toBe(true);
+    let res = await iexec.datapool.isAppAllowed(datapoolNftAddress, appAddress);
+    expect(res.appAllowed).toBe(true);
+    res = await iexec.datapool.isWorkerpoolAllowed(datapoolNftAddress, workerpoolAddress);
+    expect(res.workerpoolAllowed).toBe(true);
 
-    let res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
     expect(res.datapoolState.datasets).toContain(`${datasetAddress}: active`);
     expect(res.datapoolState.activeDatasetCount).toEqual('2');
     expect(res.datapoolState.currentDatapoolOwnerPrice).toEqual('1');
@@ -4126,6 +4126,135 @@ describe('[datapool]', () => {
     res = await iexec.datapool.createDatapoolTask(datapoolNftAddress, appOrder, workerpoolOrder, requestOrder);
     expect(res.taskid).toBeDefined();
     expect(res.taskid).toMatch(bytes32Regex);
+  });
+
+  test('datapool.createDatapool() (waitinglist)', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress: nativeHubAddress,
+        isNative: true,
+        useGas: false,
+      },
+    );
+
+    const conf = {
+      implementation: DATAPOOL_IMPLEMENTATION.WAITINGLIST,
+      datapoolOwnerPrice: 0,
+      datasetPrice: 0,
+      allowedApps: [],
+      allowedWorkerpools: [],
+    };
+
+    let res = await iexec.datapool.createDatapool(conf);
+    expect(res.txHash).toMatch(bytes32Regex);
+    expect(res.datapoolAddress).toMatch(addressRegex);
+    expect(res.datapoolNftAddress).toMatch(addressRegex);
+
+    const datapoolNftAddress = res.datapoolNftAddress;
+
+    const { address: datasetAddress } = await deployRandomDataset(iexec);
+
+    // approve
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+    res = await iexec.datapool.isDatasetInWaitingList(datapoolNftAddress, datasetAddress);
+    expect(res.waitingDataset).toEqual(true);
+
+    await iexec.datapool.approveRequestToAddDataset(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('1');
+    res = await iexec.datapool.isDatasetInWaitingList(datapoolNftAddress, datasetAddress);
+    expect(res.waitingDataset).toEqual(false);
+    await iexec.dataset.removeFromDatapool(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+
+    //decline
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.isDatasetInWaitingList(datapoolNftAddress, datasetAddress);
+    expect(res.waitingDataset).toEqual(true);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+    await iexec.datapool.declineRequestToAddDataset(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+    res = await iexec.datapool.isDatasetInWaitingList(datapoolNftAddress, datasetAddress);
+    expect(res.waitingDataset).toEqual(false);
+  });
+
+  test('datapool.createDatapool() (whitelist)', async () => {
+    const signer = utils.getSignerFromPrivateKey(
+      nativeChainInstamineUrl,
+      RICH_PRIVATE_KEY,
+    );
+    const iexec = new IExec(
+      {
+        ethProvider: signer,
+      },
+      {
+        hubAddress: nativeHubAddress,
+        isNative: true,
+        useGas: false,
+      },
+    );
+
+    const conf = {
+      implementation: DATAPOOL_IMPLEMENTATION.WHITELIST,
+      datapoolOwnerPrice: 0,
+      datasetPrice: 0,
+      allowedApps: [],
+      allowedWorkerpools: [],
+      whitelist: [],
+    };
+
+    let res = await iexec.datapool.createDatapool(conf);
+    expect(res.txHash).toMatch(bytes32Regex);
+    expect(res.datapoolAddress).toMatch(addressRegex);
+    expect(res.datapoolNftAddress).toMatch(addressRegex);
+
+    const datapoolNftAddress = res.datapoolNftAddress;
+
+    const { address: datasetAddress } = await deployRandomDataset(iexec);
+
+    // not whitelisted
+    res = await iexec.datapool.isWhitelistedDataset(datapoolNftAddress, datasetAddress);
+    expect(res.whitelistedDataset).toEqual(false);
+    await expect(iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress)).rejects.toThrow(
+      Error('This dataset is not whitelisted.'),
+    );
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+    
+    //add to whitelist
+    await iexec.datapool.addDatasetToWhitelist(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.isWhitelistedDataset(datapoolNftAddress, datasetAddress);
+    expect(res.whitelistedDataset).toEqual(true);
+    await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('1');
+    await iexec.dataset.removeFromDatapool(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
+
+    //remove from whitelist
+    res = await iexec.datapool.isWhitelistedDataset(datapoolNftAddress, datasetAddress);
+    expect(res.whitelistedDataset).toEqual(true);
+    await iexec.datapool.removeDatasetFromWhitelist(datapoolNftAddress, datasetAddress);
+    res = await iexec.datapool.isWhitelistedDataset(datapoolNftAddress, datasetAddress);
+    expect(res.whitelistedDataset).toEqual(false);
+    await expect(iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress)).rejects.toThrow(
+      Error('This dataset is not whitelisted.'),
+    );
+    res = await iexec.datapool.showDatapoolState(datapoolNftAddress);
+    expect(res.datapoolState.activeDatasetCount.toString()).toEqual('0');
   });
 
 });

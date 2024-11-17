@@ -11,13 +11,20 @@ import {
   setDatapoolOwnerPrice,
   setDatasetPrice,
   createDatapoolTask,
+  approveRequestToAddDataset,
+  declineRequestToAddDataset,
+  isDatasetInWaitingList,
+  addDatasetToWhitelist,
+  removeDatasetFromWhitelist,
+  isWhitelistedDataset,
 } from '../../common/protocol/datapool.js';
 
-import { 
-  DATAPOOL, 
+import {
+  DATAPOOL,
   APP_ORDER,
   WORKERPOOL_ORDER,
-  REQUEST_ORDER, } from '../../common/utils/constant.js';
+  REQUEST_ORDER,
+} from '../../common/utils/constant.js';
 import {
   loadIExecConf,
   initObj,
@@ -53,6 +60,7 @@ import { sumTags } from '../../lib/utils.js';
 import {
   requestorderSchema,
   apporderSchema,
+  throwIfMissing,
 } from '../../common/utils/validator.js';
 
 const objName = DATAPOOL;
@@ -87,7 +95,7 @@ init
       handleError(error, cli, opts);
     }
   });
-  
+
 
 const deploy = cli.command('deploy');
 addGlobalOptions(deploy);
@@ -102,7 +110,7 @@ deploy
   .option(...option.appRestrict())
   .option(...option.workerpoolRestrict())
   .option(...option.whitelist())
-  .description(desc.createObj(objName))
+  .description(desc.deployObj(objName))
   .action(async (opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
@@ -134,10 +142,21 @@ deploy
 
       const datapoolOwnerPrice = opts.datapoolOwnerPrice === undefined ? 0 : opts.datapoolOwnerPrice;
       const datasetPrice = opts.datasetPrice === undefined ? 0 : opts.datasetPrice;
-      const appRestrict = opts.appRestrict === undefined ? [] : opts.appRestrict;
-      const workerpoolRestrict = opts.workerpoolRestrict === undefined ? [] : opts.workerpoolRestrict;
-      const whitelist = opts.whitelist === undefined ? [] : opts.whitelist;
-
+      const appRestrict = opts.appRestrict
+        ? Array.isArray(opts.appRestrict)
+          ? opts.appRestrict
+          : opts.appRestrict.replace(/[\[\]]/g, "").split(",").map((addr) => addr.trim())
+        : [];
+      const workerpoolRestrict = opts.workerpoolRestrict
+        ? Array.isArray(opts.workerpoolRestrict)
+          ? opts.workerpoolRestrict
+          : opts.workerpoolRestrict.replace(/[\[\]]/g, "").split(",").map((addr) => addr.trim())
+        : [];
+      const whitelist = opts.whitelist
+        ? Array.isArray(opts.whitelist)
+          ? opts.whitelist
+          : opts.whitelist.replace(/[\[\]]/g, "").split(",").map((addr) => addr.trim())
+        : [];
 
       const datapoolConf = {
         implementation: implementation,
@@ -154,7 +173,7 @@ deploy
       );
 
       await initObj(objName, {
-        overwrite: { owner: address, name: implementation, tag: DATAPOOL, multiaddr: datapoolAddress},
+        overwrite: { owner: address, name: implementation, tag: DATAPOOL, multiaddr: datapoolAddress },
       });
 
       await saveDeployedObj(objName, chain.id, datapoolNftAddress);
@@ -167,7 +186,7 @@ deploy
     }
   });
 
-const show = cli.command('show [address]');
+const show = cli.command('show [datapoolNftAddress]');
 addGlobalOptions(show);
 addWalletLoadOptions(show);
 show
@@ -202,14 +221,14 @@ show
       //await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.showing(objName));
 
-      const { datapoolAddress, datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+      const { datapoolContractAddress, datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
 
       spinner.succeed(
-        `Datapool ${datapoolNftAddress} with contract address ${datapoolAddress} details:${pretty({
+        `Datapool ${datapoolNftAddress} with contract address ${datapoolContractAddress} details:${pretty({
           ...datapoolState,
         })}`,
         {
-          raw: { datapoolNftAddress, datapoolAddress, datapoolState },
+          raw: { datapoolNftAddress, datapoolContractAddress, datapoolState },
         },
       );
     } catch (error) {
@@ -221,13 +240,15 @@ const updatePolicy = cli.command('update-policy [address]')
   .description('Update datapool policy');
   */
 
-const addApp = cli.command('add-allowed-app [address]');
+const addApp = cli.command('add-allowed-app [appAddress]');
 addGlobalOptions(addApp);
 addWalletLoadOptions(addApp);
 addApp
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.addObj(objName, 'app'))
   .action(async (app, opts) => {
     await checkUpdate(opts);
@@ -236,27 +257,40 @@ addApp
       const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
 
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
-
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { appAllowed } = await isAppAllowed(
+          chain.contracts,
+          datapoolNftAddress,
+          app,
         );
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+
+        const allowedAppCount = datapoolState.allowedAppCount;
+
+        if (appAllowed && allowedAppCount !== 'infinite') {
+          throw Error(
+            `Requirements check failed: App already allowed (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+      }
 
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const {txHash} = await addAllowedApp(
+      const { datapoolContractAddress, txHash } = await addAllowedApp(
         chain.contracts,
         datapoolNftAddress,
         app,
@@ -270,13 +304,14 @@ addApp
     }
   });
 
-  const checkApp = cli.command('check-allowed-app [address]');
+const checkApp = cli.command('check-allowed-app [appAddress]');
 addGlobalOptions(checkApp);
 addWalletLoadOptions(checkApp);
 checkApp
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
   .description(desc.checkObj(objName, 'app'))
   .action(async (app, opts) => {
     await checkUpdate(opts);
@@ -285,35 +320,29 @@ checkApp
       //const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       //const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
-
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
-
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
-        );
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
 
       //await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const appAllowed = await isAppAllowed(
+      const { datapoolContractAddress, appAllowed } = await isAppAllowed(
         chain.contracts,
         datapoolNftAddress,
         app,
       );
 
-      const message = isAppAllowed
-      ? `App ${app} is allowed in datapool ${datapoolContractAddress}`
-      : `App ${app} is restricted in datapool ${datapoolContractAddress}`;
+      const message = appAllowed
+        ? `App ${app} is allowed in datapool ${datapoolContractAddress}`
+        : `App ${app} is restricted in datapool ${datapoolContractAddress}`;
 
 
       spinner.succeed(`${message}`, {
@@ -324,13 +353,15 @@ checkApp
     }
   });
 
-const addWorkerpool = cli.command('add-allowed-workerpool [address]');
+const addWorkerpool = cli.command('add-allowed-workerpool [workerpoolAddress]');
 addGlobalOptions(addWorkerpool);
 addWalletLoadOptions(addWorkerpool);
 addWorkerpool
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.addObj(objName, 'workerpool'))
   .action(async (workerpool, opts) => {
     await checkUpdate(opts);
@@ -339,26 +370,39 @@ addWorkerpool
       const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
-        (deployedObj) => deployedObj && deployedObj[chain.id],
-      );
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
 
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { workerpoolAllowed } = await isWorkerpoolAllowed(
+          chain.contracts,
+          datapoolNftAddress,
+          workerpool,
+        );
+
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+        const allowedWorkerpoolCount = datapoolState.allowedWorkerpoolCount;
+
+        if (workerpoolAllowed && allowedWorkerpoolCount !== 'infinite') {
+          throw Error(
+            `Requirements check failed: Workerpool already allowed (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+      }
 
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const {txHash} = await addAllowedWorkerpool(
+      const { datapoolContractAddress, txHash } = await addAllowedWorkerpool(
         chain.contracts,
         datapoolNftAddress,
         workerpool,
@@ -372,13 +416,14 @@ addWorkerpool
     }
   });
 
-  const checkWorkerpool = cli.command('check-allowed-workerpool [address]');
+const checkWorkerpool = cli.command('check-allowed-workerpool [workerpoolAddress]');
 addGlobalOptions(checkWorkerpool);
 addWalletLoadOptions(checkWorkerpool);
 checkWorkerpool
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
   .description(desc.checkObj(objName, 'workerpool'))
   .action(async (workerpool, opts) => {
     await checkUpdate(opts);
@@ -387,35 +432,30 @@ checkWorkerpool
       //const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       //const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
 
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
-
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
-        );
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
 
       //await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const workerpoolAllowed = await isWorkerpoolAllowed(
+      const { datapoolContractAddress, workerpoolAllowed } = await isWorkerpoolAllowed(
         chain.contracts,
         datapoolNftAddress,
         workerpool,
       );
 
-      const message = isWorkerpoolAllowed
-      ? `Workerpool ${workerpool} is allowed in datapool ${datapoolContractAddress}`
-      : `Workerpool ${workerpool} is restricted in datapool ${datapoolContractAddress}`;
+      const message = workerpoolAllowed
+        ? `Workerpool ${workerpool} is allowed in datapool ${datapoolContractAddress}`
+        : `Workerpool ${workerpool} is restricted in datapool ${datapoolContractAddress}`;
 
 
       spinner.succeed(`${message}`, {
@@ -433,6 +473,8 @@ setDatapoolPrice
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.setPriceObj(objName, 'datapool owner'))
   .action(async (datapoolOwnerPrice, opts) => {
     await checkUpdate(opts);
@@ -441,26 +483,36 @@ setDatapoolPrice
       const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
-        (deployedObj) => deployedObj && deployedObj[chain.id],
-      );
 
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+        const datapoolOwner = datapoolState.datapoolOwner;
+
+        if (datapoolOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the datapool owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+
+      }
 
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const {txHash} = await setDatapoolOwnerPrice(
+      const { datapoolContractAddress, txHash } = await setDatapoolOwnerPrice(
         chain.contracts,
         datapoolNftAddress,
         datapoolOwnerPrice,
@@ -481,6 +533,8 @@ setDatasetPriceCmd
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.setPriceObj(objName, 'dataset'))
   .action(async (datasetPrice, opts) => {
     await checkUpdate(opts);
@@ -489,26 +543,34 @@ setDatasetPriceCmd
       const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       const keystore = Keystore(walletOptions);
-      const [chain, iexecConf] = await Promise.all([
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadIExecConf(),
       ]);
-      if (!iexecConf[objName]) {
-        throw Error(
-          `Missing ${objName} in "iexec.json". Did you forget to run "iexec datapool create"?`,
-        );
-      }
-      const datapoolNftAddress =await loadDeployedObj(objName).then(
-        (deployedObj) => deployedObj && deployedObj[chain.id],
-      );
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
 
-      //const datapoolContractAddress = cmdObj.parent.args[0];
-      const datapoolContractAddress = iexecConf[objName].multiaddr;
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+        const datapoolOwner = datapoolState.datapoolOwner;
+
+        if (datapoolOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the datapool owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+      }
 
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.updating(objName));
 
-      const {txHash} = await setDatasetPrice(
+      const { datapoolContractAddress, txHash } = await setDatasetPrice(
         chain.contracts,
         datapoolNftAddress,
         datasetPrice,
@@ -516,6 +578,344 @@ setDatasetPriceCmd
 
       spinner.succeed(`Updated dataset price to ${datasetPrice} for datapool ${datapoolContractAddress}`, {
         raw: { datasetPrice, datapoolContractAddress, txHash },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const approveRequest = cli.command('approve-request-dataset [datasetAddress]');
+addGlobalOptions(approveRequest);
+addWalletLoadOptions(approveRequest);
+approveRequest
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.approveObj(objName))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        await checkWaitingListRequirements(chain, datapoolNftAddress, address, dataset);
+      }
+
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.updating(objName));
+
+      const { datapoolContractAddress, txHash } = await approveRequestToAddDataset(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      spinner.succeed(`Approved request of dataset ${dataset} to join datapool ${datapoolContractAddress}`, {
+        raw: { dataset, datapoolContractAddress, txHash },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const declineRequest = cli.command('decline-request-dataset [datasetAddress]');
+addGlobalOptions(declineRequest);
+addWalletLoadOptions(declineRequest);
+declineRequest
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.declineObj(objName))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        await checkWaitingListRequirements(chain, datapoolNftAddress, address, dataset);
+      }
+
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.updating(objName));
+
+      const { datapoolContractAddress, txHash } = await declineRequestToAddDataset(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      spinner.succeed(`Declined request of dataset ${dataset} to join datapool ${datapoolContractAddress}`, {
+        raw: { dataset, datapoolContractAddress, txHash },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const checkWaiting = cli.command('check-waiting-dataset [datasetAddress]');
+addGlobalOptions(checkWaiting);
+addWalletLoadOptions(checkWaiting);
+checkWaiting
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .description(desc.checkWaitingObj(objName))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      //const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      //const keystore = Keystore(walletOptions);
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      //await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.checking(objName));
+
+      const { datapoolContractAddress, waitingDataset } = await isDatasetInWaitingList(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      const message = waitingDataset
+        ? `Dataset ${dataset} is in the waiting list of datapool ${datapoolContractAddress}`
+        : `Dataset ${dataset} is not in the waiting list of datapool ${datapoolContractAddress}`;
+
+
+      spinner.succeed(`${message}`, {
+        raw: { dataset, datapoolContractAddress, waitingDataset },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const addWhitelist = cli.command('add-dataset-to-whitelist [datasetAddress]');
+addGlobalOptions(addWhitelist);
+addWalletLoadOptions(addWhitelist);
+addWhitelist
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.whitelistObj(objName, 'add to'))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+        const datapoolOwner = datapoolState.datapoolOwner;
+
+        if (datapoolOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the datapool owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+          );
+        }
+
+        const { whitelistedDataset } = await isWhitelistedDataset(
+          chain.contracts,
+          datapoolNftAddress,
+          dataset
+        );
+
+        if (whitelistedDataset) {
+          throw Error(
+            `Requirements check failed: Dataset is already in whitelist. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+          );
+        }
+      }
+
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.updating(objName));
+
+      const { datapoolContractAddress, txHash } = await addDatasetToWhitelist(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      spinner.succeed(`Added dataset ${dataset} to whitelist of datapool ${datapoolContractAddress}`, {
+        raw: { dataset, datapoolContractAddress, txHash },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const removeWhitelist = cli.command('remove-dataset-from-whitelist [datasetAddress]');
+addGlobalOptions(removeWhitelist);
+addWalletLoadOptions(removeWhitelist);
+removeWhitelist
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.whitelistObj(objName, 'remove from'))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+        const datapoolOwner = datapoolState.datapoolOwner;
+
+        if (datapoolOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the datapool owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+          );
+        }
+
+        const { whitelistedDataset } = await isWhitelistedDataset(
+          chain.contracts,
+          datapoolNftAddress,
+          dataset
+        );
+
+        if (!whitelistedDataset) {
+          throw Error(
+            `Requirements check failed: Dataset is not in whitelist. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+          );
+        }
+      }
+
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.updating(objName));
+
+      const { datapoolContractAddress, txHash } = await removeDatasetFromWhitelist(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      spinner.succeed(`Removed dataset ${dataset} from whitelist of datapool ${datapoolContractAddress}`, {
+        raw: { dataset, datapoolContractAddress, txHash },
+      });
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+const checkWhitelist = cli.command('check-whitelisted-dataset [datasetAddress]');
+addGlobalOptions(checkWhitelist);
+addWalletLoadOptions(checkWhitelist);
+checkWhitelist
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datapoolAddress())
+  .description(desc.whitelistObj(objName, 'check'))
+  .action(async (dataset, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+    try {
+      //const walletOptions = computeWalletLoadOptions(opts);
+      const txOptions = await computeTxOptions(opts);
+      //const keystore = Keystore(walletOptions);
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+
+      const datapoolNftAddress =
+        opts.datapoolAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      //await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.checking(objName));
+
+      const { datapoolContractAddress, whitelistedDataset } = await isWhitelistedDataset(
+        chain.contracts,
+        datapoolNftAddress,
+        dataset,
+      );
+
+      const message = whitelistedDataset
+        ? `Dataset ${dataset} is whitelisted in datapool ${datapoolContractAddress}`
+        : `Dataset ${dataset} is not whitelisted in datapool ${datapoolContractAddress}`;
+
+
+      spinner.succeed(`${message}`, {
+        raw: { dataset, datapoolContractAddress, whitelistedDataset },
       });
     } catch (error) {
       handleError(error, cli, opts);
@@ -547,7 +947,6 @@ fill
       const [chain, signedOrders] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
         loadSignedOrders(),
-        loadIExecConf(),
       ]);
 
       const inputParams = opts.params;
@@ -633,11 +1032,24 @@ fill
             } to skip preflight requirement check)`,
           );
         });
+
+        await checkDatapoolRequirements(
+          chain.contracts,
+          datapoolNftAddress,
+          appOrder.app,
+          workerpoolOrder.workerpool,
+          requestOrder,
+        ).catch((e) => {
+          throw Error(
+            `Request requirements check failed: ${e.message
+            } (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        });
       }
 
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.creating(`${objName} task`));
-
 
       const { taskid } = await createDatapoolTask(
         chain.contracts,
@@ -654,15 +1066,83 @@ fill
       handleError(error, cli, opts);
     }
   });
-/*
-  function hasRequiredFunctions(childAbiPath, parentAbi) {
-    const data = readFile(childAbiPath, 'utf-8');
-    const childAbi = JSON.parse(data);
-    const childFunctions = new Set(childAbi.filter(item => item.type === 'function').map(item => item.name));
-    const parentFunctions = parentAbi.filter(item => item.type === 'function').map(item => item.name);
-    
-    return parentFunctions.every(func => childFunctions.has(func));
+
+const checkDatapoolRequirements = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  app = throwIfMissing(),
+  workerpool = throwIfMissing(),
+  requestOrder = throwIfMissing(),
+) => {
+  const { datapoolState } = await showDatapoolState(contracts, datapoolNftAddress);
+  const activeDatasetCount = datapoolState.activeDatasetCount;
+
+  if (activeDatasetCount === '0') {
+    throw Error(
+      'Datapool is empty, wait for a dataset to join the datapool before creating a task.',
+    );
   }
-  */
+
+  const { appAllowed } = await isAppAllowed(
+    contracts,
+    datapoolNftAddress,
+    app,
+  );
+
+  if (!appAllowed) {
+    throw Error(
+      'App is not allowed for this datapool.',
+    );
+  }
+
+  const { workerpoolAllowed } = await isWorkerpoolAllowed(
+    contracts,
+    datapoolNftAddress,
+    workerpool,
+  );
+
+  if (!workerpoolAllowed) {
+    throw Error(
+      'Workerpool is not allowed for this datapool.',
+    );
+  }
+
+  if (requestOrder.dataset !== datapoolNftAddress) {
+    throw Error(
+      'Dataset in request order does not match the datapool NFT address.',
+    );
+  }
+
+  const price = parseInt(activeDatasetCount) * parseInt(datapoolState.currentDatasetPrice) + parseInt(datapoolState.currentDatapoolOwnerPrice);
+  if (requestOrder.datasetmaxprice < price) {
+    throw Error(
+      `Dataset max price in request order is lower than datapool price (${requestOrder.datasetmaxprice} < ${price}).`,
+    );
+  }
+};
+
+async function checkWaitingListRequirements(chain, datapoolNftAddress, address, dataset) {
+  const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
+  const datapoolOwner = datapoolState.datapoolOwner;
+
+  if (datapoolOwner !== address) {
+    throw Error(
+      `Requirements check failed: You are not the datapool owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+    );
+  }
+
+  const { waitingDataset } = await isDatasetInWaitingList(
+    chain.contracts,
+    datapoolNftAddress,
+    dataset
+  );
+
+  if (!waitingDataset) {
+    throw Error(
+      `Requirements check failed: Dataset is not in waiting list. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]} to skip preflight requirement check)`
+    );
+  }
+};
 
 finalizeCli(cli);
+

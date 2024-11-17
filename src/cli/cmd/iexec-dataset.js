@@ -15,6 +15,7 @@ import {
 import {
   addDataset,
   removeDataset,
+  isActiveDataset,
 } from '../../common/protocol/datapool.js';
 import {
   createDatasetorder,
@@ -632,18 +633,17 @@ unpublish
       await connectKeystore(chain, keystore);
       const unpublished = all
         ? await unpublishAllDatasetorders(
-            chain.contracts,
-            getPropertyFormChain(chain, 'iexecGateway'),
-            address,
-          )
+          chain.contracts,
+          getPropertyFormChain(chain, 'iexecGateway'),
+          address,
+        )
         : await unpublishLastDatasetorder(
-            chain.contracts,
-            getPropertyFormChain(chain, 'iexecGateway'),
-            address,
-          );
+          chain.contracts,
+          getPropertyFormChain(chain, 'iexecGateway'),
+          address,
+        );
       spinner.succeed(
-        `Successfully unpublished ${all ? 'all' : 'last'} ${objName}order${
-          all ? 's' : ''
+        `Successfully unpublished ${all ? 'all' : 'last'} ${objName}order${all ? 's' : ''
         }`,
         {
           raw: {
@@ -700,13 +700,15 @@ transfer
     }
   });
 
-  const addToDatapool = cli.command('join-datapool [address]');
+const addToDatapool = cli.command('join-datapool [datapoolAddress]');
 addGlobalOptions(addToDatapool);
 addWalletLoadOptions(addToDatapool);
 addToDatapool
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datasetAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.joinObj(DATAPOOL))
   .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
@@ -715,32 +717,50 @@ addToDatapool
     try {
       const walletOptions = computeWalletLoadOptions(opts);
       const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
       const txOptions = await computeTxOptions(opts);
 
       const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
       ]);
-      
-      await connectKeystore(chain, keystore, { txOptions });
 
       const datapoolNftAddress = cliAddress;
-      const datasetAddress = await loadDeployedObj(objName).then(
+      const datasetAddress =
+        opts.datasetAddress ||
+        (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
-        );
+        ));
 
       if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
       if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
 
+      if (!opts.skipPreflightCheck) {
+        const { dataset } = await showDataset(chain.contracts, datasetAddress);
+        const datasetOwner = dataset.owner;
+
+        if (datasetOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the dataset owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+
+      }
+      await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.joining(DATAPOOL));
 
-      const { dataset, txHash } = await addDataset(
+      const { dataset, txHash, isWaitingList } = await addDataset(
         chain.contracts,
         datapoolNftAddress,
         datasetAddress,
       );
 
+      const message = isWaitingList
+        ? `Dataset joined the waiting list of datapool ${datapoolNftAddress}`
+        : `Dataset joined datapool ${datapoolNftAddress}`;
+
       spinner.succeed(
-        `Dataset joined datapool ${datapoolNftAddress} details:${pretty({
+        `${message}, details:${pretty({
           dataset, txHash,
         })}`,
         {
@@ -752,35 +772,60 @@ addToDatapool
     }
   });
 
-  const removeFromDatapool = cli.command('leave-datapool [address]');
+const removeFromDatapool = cli.command('leave-datapool [datapoolAddress]');
 addGlobalOptions(removeFromDatapool);
 addWalletLoadOptions(removeFromDatapool);
 removeFromDatapool
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
+  .option(...option.datasetAddress())
+  .option(...option.skipPreflightCheck())
   .description(desc.leaveObj(DATAPOOL))
   .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
-    
+
 
     try {
       const walletOptions = computeWalletLoadOptions(opts);
       const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
       const txOptions = await computeTxOptions(opts);
       const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
       ]);
-      await connectKeystore(chain, keystore, { txOptions });
+
       const datapoolNftAddress = cliAddress;
-      const datasetAddress = await loadDeployedObj(objName).then(
+      const datasetAddress =
+        opts.datasetAddress ||
+        (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
-        );
+        ));
 
       if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
       if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
 
+      if (!opts.skipPreflightCheck) {
+        const { dataset } = await showDataset(chain.contracts, datasetAddress);
+        const datasetOwner = dataset.owner;
+
+        if (datasetOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the dataset owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+
+        const { activeDataset } = await isActiveDataset(chain.contracts, datapoolNftAddress, datasetAddress);
+        if (!activeDataset) {
+          throw Error(
+            `Requirements check failed: Your dataset is not in the datapool or already exited it. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+      }
+      await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.leaving(DATAPOOL));
 
       const { dataset, txHash } = await removeDataset(

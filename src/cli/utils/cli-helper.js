@@ -79,6 +79,7 @@ export const info = {
   joining: (obj) => `Joining ${obj}...`,
   leaving: (obj) => `Leaving ${obj}...`,
   updating: (obj) => `Updating ${obj}...`,
+  checking: (obj) => `Checking ${obj}...`,
   counting: (obj) => `Counting ${obj}...`,
   depositing: () => 'Making deposit...',
   checkingSwapRate: () => 'Checking swap rate...',
@@ -111,7 +112,11 @@ export const desc = {
   createObj: (objName) => `create a new ${objName}`,
   addAppObj: (objName) => `add an allowed app to ${objName}`,
   addObj: (objName, obj) => `add allowed ${obj} to ${objName}`,
+  approveObj: (objName) => `approve request of joining ${objName} (only for WaitingListDatapool)`,
+  declineObj: (objName) => `decline request of joining ${objName} (only for WaitingListDatapool)`,
+  checkWaitingObj: (objName) => `check if dataset is in waiting list of ${objName} (only for WaitingListDatapool)`,
   checkObj: (objName, obj) => `check if ${obj} is allowed in ${objName}`,
+  whitelistObj: (objName, obj) => `${obj} whitelist of ${objName} (only for WhitelistedDatapool)`,
   setPriceObj: (objName, priceObj) => `set ${priceObj} price of ${objName}`,
   createTaskObj: (objName) => `create a ${objName} task`,
   joinObj: (objName) => `join a ${objName}`,
@@ -400,6 +405,14 @@ export const option = {
   datapoolOwnerPrice: () => [
     '--datapool-owner-price <price>',
     'Set the fee for the datapool owner.',
+  ],
+  datasetAddress: () => [
+    '--dataset-address <address>',
+    'Set the dataset address.',
+  ],
+  datapoolAddress: () => [
+    '--datapool-address <address>',
+    'Set the datapool address.',
   ],
   datasetPrice: () => [
       '--dataset-price <price>',
