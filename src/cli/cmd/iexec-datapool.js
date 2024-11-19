@@ -63,6 +63,9 @@ import {
   apporderSchema,
   throwIfMissing,
 } from '../../common/utils/validator.js';
+import {
+  fetchPublishedOrderByHash,
+} from '../../common/market/marketplace.js';
 
 const objName = DATAPOOL;
 
