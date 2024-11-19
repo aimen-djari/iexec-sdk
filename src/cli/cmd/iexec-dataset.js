@@ -756,8 +756,8 @@ addToDatapool
       );
 
       const message = isWaitingList
-        ? `Dataset joined the waiting list of datapool ${datapoolNftAddress}`
-        : `Dataset joined datapool ${datapoolNftAddress}`;
+        ? `Dataset joined datapool ${datapoolNftAddress}`
+        : `Dataset joined the waiting list of datapool ${datapoolNftAddress}`
 
       spinner.succeed(
         `${message}, details:${pretty({
