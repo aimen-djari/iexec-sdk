@@ -1045,7 +1045,7 @@ fill
           requestOrder,
         ).catch((e) => {
           throw Error(
-            `Request requirements check failed: ${e.message
+            `Datapool requirements check failed: ${e.message
             } (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
             } to skip preflight requirement check)`,
           );
