@@ -50,6 +50,7 @@ import {
   isEthAddress,
   getPropertyFormChain,
   getSmsUrlFromChain,
+  isBytes32,
 } from '../utils/cli-helper.js';
 import {
   checkRequestRequirements,
