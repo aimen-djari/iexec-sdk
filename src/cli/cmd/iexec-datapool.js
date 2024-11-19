@@ -941,7 +941,7 @@ fill
   .option(...option.fillRequestParams())
   .option(...option.skipPreflightCheck())
   .description(desc.createTaskObj(objName))
-  .action(async (datapoolNftAddress, opts) => {
+  .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
     try {
@@ -952,6 +952,12 @@ fill
         loadChain(opts.chain, { txOptions, spinner }),
         loadSignedOrders(),
       ]);
+
+      const datapoolNftAddress =
+        cliAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
 
       const inputParams = opts.params;
       const requestOnTheFly = inputParams !== undefined;
