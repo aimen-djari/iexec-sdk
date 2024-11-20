@@ -16,6 +16,8 @@ import {
   addDataset,
   removeDataset,
   isActiveDataset,
+  withdrawTaskReward,
+  withdrawAllTasksRewards,
 } from '../../common/protocol/datapool.js';
 import {
   createDatasetorder,
@@ -840,6 +842,143 @@ removeFromDatapool
         })}`,
         {
           raw: { address: dataset, hash: txHash },
+        },
+      );
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+  const withdrawTask = cli.command('withdraw-task-reward-datapool [datapoolAddress] [taskid]');
+addGlobalOptions(withdrawTask);
+addWalletLoadOptions(withdrawTask);
+withdrawTask
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datasetAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.withdrawObj(DATAPOOL, "task reward"))
+  .action(async (cliAddress, taskId, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const txOptions = await computeTxOptions(opts);
+
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+
+      const datapoolNftAddress = cliAddress;
+      const datasetAddress =
+        opts.datasetAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { dataset } = await showDataset(chain.contracts, datasetAddress);
+        const datasetOwner = dataset.owner;
+
+        if (datasetOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the dataset owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+
+      }
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.withdrawing(DATAPOOL));
+  
+      const { dataset, datapoolContractAddress, taskid, txHash } = await withdrawTaskReward(
+        chain.contracts,
+        datapoolNftAddress,
+        datasetAddress,
+        taskId,
+      );
+
+      spinner.succeed(
+        `Task reward successfully withdrawn for task id ${taskid} in datapool ${datapoolNftAddress} for dataset ${dataset}, details:${pretty({
+          dataset, datapoolContractAddress, taskid, txHash,
+        })}`,
+        {
+          raw: { address: dataset, datapoolContractAddress, taskid, hash: txHash },
+        },
+      );
+    } catch (error) {
+      handleError(error, cli, opts);
+    }
+  });
+
+  const withdrawAll = cli.command('withdraw-all-reward-datapool [datapoolAddress]');
+addGlobalOptions(withdrawAll);
+addWalletLoadOptions(withdrawAll);
+withdrawAll
+  .option(...option.chain())
+  .option(...option.txGasPrice())
+  .option(...option.txConfirms())
+  .option(...option.datasetAddress())
+  .option(...option.skipPreflightCheck())
+  .description(desc.withdrawObj(DATAPOOL, "all tasks rewards"))
+  .action(async (cliAddress, opts) => {
+    await checkUpdate(opts);
+    const spinner = Spinner(opts);
+
+    try {
+      const walletOptions = computeWalletLoadOptions(opts);
+      const keystore = Keystore(walletOptions);
+      const [address] = await keystore.accounts();
+      const txOptions = await computeTxOptions(opts);
+
+      const [chain] = await Promise.all([
+        loadChain(opts.chain, { txOptions, spinner }),
+      ]);
+
+      const datapoolNftAddress = cliAddress;
+      const datasetAddress =
+        opts.datasetAddress ||
+        (await loadDeployedObj(objName).then(
+          (deployedObj) => deployedObj && deployedObj[chain.id],
+        ));
+
+      if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
+      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+
+      if (!opts.skipPreflightCheck) {
+        const { dataset } = await showDataset(chain.contracts, datasetAddress);
+        const datasetOwner = dataset.owner;
+
+        if (datasetOwner !== address) {
+          throw Error(
+            `Requirements check failed: You are not the dataset owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
+
+      }
+      await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.withdrawing(DATAPOOL));
+  
+      const { dataset, datapoolContractAddress, txHash } = await withdrawAllTasksRewards(
+        chain.contracts,
+        datapoolNftAddress,
+        datasetAddress,
+      );
+
+      spinner.succeed(
+        `Tasks rewards successfully withdrawn for tasks in datapool ${datapoolNftAddress} for dataset ${dataset}, details:${pretty({
+          dataset, datapoolContractAddress, txHash,
+        })}`,
+        {
+          raw: { address: dataset, datapoolContractAddress, hash: txHash },
         },
       );
     } catch (error) {

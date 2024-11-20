@@ -121,6 +121,7 @@ export const desc = {
   createTaskObj: (objName) => `create a ${objName} task`,
   joinObj: (objName) => `join a ${objName}`,
   leaveObj: (objName) => `leave a ${objName}`,
+  withdrawObj: (objName, obj) => `withdraw ${obj} of ${objName}`,
   publishObj: (objName) =>
     `publish a ${objName}order on the marketplace to make the ${objName} publicly available (use options to set custom usage restriction)`,
   unpublishObj: (objName) =>

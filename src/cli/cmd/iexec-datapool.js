@@ -66,6 +66,9 @@ import {
 import {
   fetchPublishedOrderByHash,
 } from '../../common/market/marketplace.js';
+import {
+  getRemainingVolume,
+} from '../../common/market/order.js';
 
 const objName = DATAPOOL;
 
@@ -959,9 +962,6 @@ fill
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
 
-      const inputParams = opts.params;
-      const requestOnTheFly = inputParams !== undefined;
-
       const getOrderByHash = async (orderName, orderHash) => {
         if (isBytes32(orderHash, { strict: false })) {
           spinner.info(
@@ -988,24 +988,46 @@ fill
       const workerpoolOrder = opts.workerpool
         ? await getOrderByHash(WORKERPOOL_ORDER, opts.workerpool)
         : signedOrders[chain.id].workerpoolorder;
-      let requestOrderInput;
-      if (requestOnTheFly) {
-        requestOrderInput = undefined;
-      } else {
-        requestOrderInput = opts.request
-          ? await getOrderByHash(REQUEST_ORDER, opts.request)
-          : signedOrders[chain.id].requestorder;
-      }
+      const requestOrder = opts.request
+        ? await getOrderByHash(REQUEST_ORDER, opts.request)
+        : signedOrders[chain.id].requestorder;
 
       if (!appOrder) throw new Error('Missing apporder');
       if (!workerpoolOrder) throw new Error('Missing workerpoolorder');
-
-      const requestOrder = requestOrderInput;
-      if (!requestOrder) {
-        throw new Error('Missing requestorder');
-      }
+      if (!requestOrder) throw new Error('Missing requestorder');
 
       if (!opts.skipPreflightCheck) {
+        getRemainingVolume(
+          chain.contracts,
+          WORKERPOOL_ORDER,
+          workerpoolOrder,
+        ).then((volume) => {
+          if (volume.lte(new BN(0)))
+            throw new Error('workerpoolorder is fully consumed');
+          return volume;
+        })
+
+        getRemainingVolume(
+          chain.contracts,
+          APP_ORDER,
+          appOrder,
+        ).then((volume) => {
+          if (volume.lte(new BN(0)))
+            throw new Error('apporder is fully consumed');
+          return volume;
+        })
+
+        getRemainingVolume(
+          chain.contracts,
+          REQUEST_ORDER,
+          requestOrder,
+        ).then((volume) => {
+          if (volume.lte(new BN(0)))
+            throw new Error('requestorder is fully consumed');
+          return volume;
+        })
+
+
         const resolvedTag = sumTags([
           (
             await requestorderSchema()

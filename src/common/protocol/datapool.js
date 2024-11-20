@@ -393,6 +393,56 @@ export const removeDataset = async (
   }
 };
 
+export const withdrawTaskReward = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+  taskid = throwIfMissing(),
+) => {
+  try {
+    checkSigner(contracts);
+
+    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
+    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
+    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
+    const vDatasetAddress = await addressSchema().validate(datasetAddress);
+    const vTaskid = await bytes32Schema().validate(taskid);
+
+    const tx = await wrapSend(datapoolContract.withdrawTaskReward(vTaskid, vDatasetAddress));
+    await wrapWait(tx.wait(contracts.confirms));
+    const txHash = tx.hash;
+
+    return { dataset: vDatasetAddress, datapoolContractAddress: vDatapoolAddress, taskid: vTaskid, txHash };
+  } catch (error) {
+    debug('withdrawTaskReward()', error);
+    throw error;
+  }
+};
+
+export const withdrawAllTasksRewards = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+) => {
+  try {
+    checkSigner(contracts);
+
+    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
+    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
+    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
+    const vDatasetAddress = await addressSchema().validate(datasetAddress);
+
+    const tx = await wrapSend(datapoolContract.withdrawAllTasksRewards(vDatasetAddress));
+    await wrapWait(tx.wait(contracts.confirms));
+    const txHash = tx.hash;
+
+    return { dataset: vDatasetAddress, datapoolContractAddress: vDatapoolAddress, txHash };
+  } catch (error) {
+    debug('withdrawAllTasksRewards()', error);
+    throw error;
+  }
+};
+
 export const isAppAllowed = async (
   contracts = throwIfMissing(),
   datapoolNftAddress = throwIfMissing(),
