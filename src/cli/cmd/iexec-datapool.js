@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { program as cli } from 'commander';
+import BN from 'bn.js';
 import {
   createDatapool,
   showDatapoolState,
