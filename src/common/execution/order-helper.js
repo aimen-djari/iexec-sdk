@@ -10,6 +10,7 @@ import {
   IEXEC_REQUEST_PARAMS,
   STORAGE_PROVIDERS,
   TEE_FRAMEWORKS,
+  DATAPOOL,
 } from '../utils/constant.js';
 import {
   getStorageTokenKeyName,
@@ -23,7 +24,7 @@ import {
   apporderSchema,
   tagSchema,
 } from '../utils/validator.js';
-import { resolveTeeFrameworkFromApp, showApp } from '../protocol/registries.js';
+import { resolveTeeFrameworkFromApp, showApp, showDataset } from '../protocol/registries.js';
 
 export const resolveTeeFrameworkFromTag = async (tag) => {
   const vTag = await tagSchema().validate(tag);
@@ -118,8 +119,11 @@ export const checkRequestRequirements = async (
     }
   }
 
+  const {dataset: datasetObj } = await showDataset(contracts, dataset);
+  const isDatapool = datasetObj.datasetTag === DATAPOOL;
+
   // check tee dataset encryption key
-  if (dataset && dataset !== NULL_ADDRESS && isTee) {
+  if (dataset && dataset !== NULL_ADDRESS && isTee && !isDatapool) {
     const isDatasetSecretSet = await checkWeb3SecretExists(
       contracts,
       smsURL,

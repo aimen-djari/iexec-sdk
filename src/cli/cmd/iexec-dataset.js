@@ -747,6 +747,13 @@ addToDatapool
           );
         }
 
+        const { activeDataset } = await isActiveDataset(chain.contracts, datasetAddress);
+        if(activeDataset){
+          throw Error(
+            `Requirements check failed: Your dataset is already in the datapool. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
+            } to skip preflight requirement check)`,
+          );
+        }
       }
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.joining(DATAPOOL));
