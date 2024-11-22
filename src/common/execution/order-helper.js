@@ -100,7 +100,7 @@ export const checkRequestRequirements = async (
   // check dropbox storage token
   if (
     paramsObj[IEXEC_REQUEST_PARAMS.IEXEC_RESULT_STORAGE_PROVIDER] ===
-      STORAGE_PROVIDERS.DROPBOX
+    STORAGE_PROVIDERS.DROPBOX
   ) {
     const isStorageTokenSet = await checkWeb2SecretExists(
       contracts,
@@ -112,28 +112,29 @@ export const checkRequestRequirements = async (
     );
     if (!isStorageTokenSet) {
       throw Error(
-        `Requester storage token is not set for selected provider "${
-          paramsObj[IEXEC_REQUEST_PARAMS.IEXEC_RESULT_STORAGE_PROVIDER]
+        `Requester storage token is not set for selected provider "${paramsObj[IEXEC_REQUEST_PARAMS.IEXEC_RESULT_STORAGE_PROVIDER]
         }". Result archive upload will fail.`,
       );
     }
   }
 
-  const {dataset: datasetObj } = await showDataset(contracts, dataset);
-  const isDatapool = datasetObj.datasetTag === DATAPOOL;
-
   // check tee dataset encryption key
-  if (dataset && dataset !== NULL_ADDRESS && isTee && !isDatapool) {
-    const isDatasetSecretSet = await checkWeb3SecretExists(
-      contracts,
-      smsURL,
-      dataset,
-    );
-    if (!isDatasetSecretSet) {
-      throw Error(
-        `Dataset encryption key is not set for dataset ${dataset} in the SMS. Dataset decryption will fail.`,
+  if (dataset && dataset !== NULL_ADDRESS && isTee) {
+    const { dataset: datasetObj } = await showDataset(contracts, dataset);
+    const isDatapool = datasetObj.datasetTag === DATAPOOL;
+    if (!isDatapool) {
+      const isDatasetSecretSet = await checkWeb3SecretExists(
+        contracts,
+        smsURL,
+        dataset,
       );
+      if (!isDatasetSecretSet) {
+        throw Error(
+          `Dataset encryption key is not set for dataset ${dataset} in the SMS. Dataset decryption will fail.`,
+        );
+      }
     }
+
   }
   // check requester secrets
   if (paramsObj[IEXEC_REQUEST_PARAMS.IEXEC_SECRETS]) {
