@@ -1520,7 +1520,7 @@ describe('[Mainchain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Datapool is empty, wait for a dataset to join the datapool before creating a task. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Datapool is empty, wait for a dataset to join the datapool before creating a task. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -1533,7 +1533,7 @@ describe('[Mainchain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: App is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: App is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -1546,7 +1546,7 @@ describe('[Mainchain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Workerpool is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Workerpool is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -1559,7 +1559,7 @@ describe('[Mainchain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Dataset in request order does not match the datapool NFT address. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Dataset in request order does not match the datapool NFT address. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await editRequestorder({
@@ -1576,7 +1576,7 @@ describe('[Mainchain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Dataset max price in request order is lower than datapool price (0 < 2). (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Dataset max price in request order is lower than datapool price (0 < 2). (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await editRequestorder({
@@ -4033,7 +4033,7 @@ describe('[Sidechain]', () => {
     let res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Datapool is empty, wait for a dataset to join the datapool before creating a task. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Datapool is empty, wait for a dataset to join the datapool before creating a task. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -4046,7 +4046,7 @@ describe('[Sidechain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: App is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: App is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -4059,7 +4059,7 @@ describe('[Sidechain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Workerpool is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Workerpool is not allowed for this datapool. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await execAsync(
@@ -4072,7 +4072,7 @@ describe('[Sidechain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Dataset in request order does not match the datapool NFT address. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Dataset in request order does not match the datapool NFT address. (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await editRequestorder({
@@ -4089,7 +4089,7 @@ describe('[Sidechain]', () => {
     res = JSON.parse(raw);
     expect(res.ok).toBe(false);
     expect(res.error.message).toBe(
-      'Request requirements check failed: Dataset max price in request order is lower than datapool price (0 < 2). (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
+      'Datapool requirements check failed: Dataset max price in request order is lower than datapool price (0 < 2). (If you consider this is not an issue, use --skip-preflight-check to skip preflight requirement check)',
     );
 
     await editRequestorder({
