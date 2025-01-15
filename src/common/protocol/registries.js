@@ -164,11 +164,6 @@ export const deployDataset = async (contracts, dataset) =>
     contracts,
     await datasetSchema({ ethProvider: contracts.provider }).validate(dataset),
   );
-  export const deployDatapool = async (contracts, datapool) =>
-  deployObj(DATAPOOL)(
-    contracts,
-    await datasetSchema({ ethProvider: contracts.provider }).validate(datapool),
-  );
 export const deployWorkerpool = async (contracts, workerpool) =>
   deployObj(WORKERPOOL)(
     contracts,
@@ -375,25 +370,6 @@ export const showDataset = async (
   datasetAddress = throwIfMissing(),
 ) => {
   const { obj, objAddress } = await showObjByAddress(DATASET)(
-    contracts,
-    await addressSchema({ ethProvider: contracts.provider }).validate(
-      datasetAddress,
-    ),
-  );
-  const clean = Object.assign(
-    cleanObj(obj),
-    obj.m_datasetMultiaddr && {
-      datasetMultiaddr: multiaddrHexToHuman(obj.m_datasetMultiaddr),
-    },
-  );
-  return { objAddress, dataset: clean };
-};
-
-export const showDatapool = async (
-  contracts = throwIfMissing(),
-  datasetAddress = throwIfMissing(),
-) => {
-  const { obj, objAddress } = await showObjByAddress(DATAPOOL)(
     contracts,
     await addressSchema({ ethProvider: contracts.provider }).validate(
       datasetAddress,

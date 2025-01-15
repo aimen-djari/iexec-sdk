@@ -11,8 +11,7 @@ import {
 import {
   addDataset,
   removeDataset,
-  withdrawTaskReward,
-  withdrawAllTasksRewards,
+  withdrawVersionReward,
 } from '../common/protocol/datapool.js';
 import { checkWeb3SecretExists } from '../common/sms/check.js';
 import { pushWeb3Secret } from '../common/sms/push.js';
@@ -39,10 +38,8 @@ export default class IExecDatasetModule extends IExecModule {
     this.removeFromDatapool = async (datapoolNftAddress, datasetAddress) =>
     removeDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
 
-    this.withdrawTaskRewardInDatapool = async (datapoolNftAddress, datasetAddress, taskid) =>
-    withdrawTaskReward(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress, taskid);
-    this.withdrawAllTasksRewardsInDatapool = async (datapoolNftAddress, datasetAddress) =>
-    withdrawAllTasksRewards(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+    this.withdrawVersionRewardInDatapool = async (datapoolNftAddress, datasetAddress, versionid) =>
+    withdrawVersionReward(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress, versionid);
 
 
     this.showDataset = async (address) =>

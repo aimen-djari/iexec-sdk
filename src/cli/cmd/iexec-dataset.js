@@ -16,8 +16,8 @@ import {
   addDataset,
   removeDataset,
   isActiveDataset,
-  withdrawTaskReward,
-  withdrawAllTasksRewards,
+  showAllVersionsRewards,
+  withdrawVersionReward,
 } from '../../common/protocol/datapool.js';
 import {
   createDatasetorder,
@@ -728,7 +728,7 @@ addToDatapool
 
       const datapoolNftAddress = cliAddress;
       const datasetAddress =
-        opts.datasetAddress ||
+        opts.dataset ||
         (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
@@ -748,7 +748,7 @@ addToDatapool
         }
 
         const { activeDataset } = await isActiveDataset(chain.contracts, datapoolNftAddress, datasetAddress);
-        if(activeDataset){
+        if (activeDataset) {
           throw Error(
             `Requirements check failed: Your dataset is already in the datapool. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
             } to skip preflight requirement check)`,
@@ -807,7 +807,7 @@ removeFromDatapool
 
       const datapoolNftAddress = cliAddress;
       const datasetAddress =
-        opts.datasetAddress ||
+        opts.dataset ||
         (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
@@ -856,33 +856,29 @@ removeFromDatapool
     }
   });
 
-  const withdrawTask = cli.command('withdraw-task-reward-datapool [datapoolAddress] [taskid]');
-addGlobalOptions(withdrawTask);
-addWalletLoadOptions(withdrawTask);
-withdrawTask
+const showReward = cli.command('show-reward [datapoolNftAddress]');
+addGlobalOptions(showReward);
+addWalletLoadOptions(showReward);
+showReward
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
   .option(...option.datasetAddress())
-  .option(...option.skipPreflightCheck())
-  .description(desc.withdrawObj(DATAPOOL, "task reward"))
-  .action(async (cliAddress, taskId, opts) => {
+  .description(desc.showObj("Datapool", 'reward'))
+  .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
-
     try {
-      const walletOptions = computeWalletLoadOptions(opts);
-      const keystore = Keystore(walletOptions);
-      const [address] = await keystore.accounts();
+      //const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
-
+      //const keystore = Keystore(walletOptions);
       const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
       ]);
-
       const datapoolNftAddress = cliAddress;
+
       const datasetAddress =
-        opts.datasetAddress ||
+        opts.dataset ||
         (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
@@ -890,52 +886,41 @@ withdrawTask
       if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
       if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
 
-      if (!opts.skipPreflightCheck) {
-        const { dataset } = await showDataset(chain.contracts, datasetAddress);
-        const datasetOwner = dataset.owner;
+      //await connectKeystore(chain, keystore, { txOptions });
+      spinner.start(info.updating(objName));
 
-        if (datasetOwner !== address) {
-          throw Error(
-            `Requirements check failed: You are not the dataset owner. (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        }
-
-      }
-      await connectKeystore(chain, keystore, { txOptions });
-      spinner.start(info.withdrawing(DATAPOOL));
-  
-      const { dataset, datapoolContractAddress, taskid, txHash } = await withdrawTaskReward(
+      const { result } = await showAllVersionsRewards(
         chain.contracts,
         datapoolNftAddress,
         datasetAddress,
-        taskId,
       );
 
+
       spinner.succeed(
-        `Task reward successfully withdrawn for task id ${taskid} in datapool ${datapoolNftAddress} for dataset ${dataset}, details:${pretty({
-          dataset, datapoolContractAddress, taskid, txHash,
+        `Datapool ${datapoolNftAddress} version rewards:${pretty({
+          ...result,
         })}`,
         {
-          raw: { address: dataset, datapoolContractAddress, taskid, hash: txHash },
+          raw: { datapoolNftAddress, datasetAddress, result },
         },
       );
     } catch (error) {
       handleError(error, cli, opts);
     }
+
   });
 
-  const withdrawAll = cli.command('withdraw-all-reward-datapool [datapoolAddress]');
-addGlobalOptions(withdrawAll);
-addWalletLoadOptions(withdrawAll);
-withdrawAll
+const withdrawVersion = cli.command('withdraw-version-reward-datapool [datapoolAddress] [versionid]');
+addGlobalOptions(withdrawVersion);
+addWalletLoadOptions(withdrawVersion);
+withdrawVersion
   .option(...option.chain())
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
   .option(...option.datasetAddress())
   .option(...option.skipPreflightCheck())
-  .description(desc.withdrawObj(DATAPOOL, "all tasks rewards"))
-  .action(async (cliAddress, opts) => {
+  .description(desc.withdrawObj(DATAPOOL, "version reward"))
+  .action(async (cliAddress, versionId, opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
 
@@ -951,7 +936,7 @@ withdrawAll
 
       const datapoolNftAddress = cliAddress;
       const datasetAddress =
-        opts.datasetAddress ||
+        opts.dataset ||
         (await loadDeployedObj(objName).then(
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
@@ -973,19 +958,20 @@ withdrawAll
       }
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.withdrawing(DATAPOOL));
-  
-      const { dataset, datapoolContractAddress, txHash } = await withdrawAllTasksRewards(
+
+      const { dataset, datapoolContractAddress, versionid, txHash } = await withdrawVersionReward(
         chain.contracts,
         datapoolNftAddress,
         datasetAddress,
+        versionId,
       );
 
       spinner.succeed(
-        `Tasks rewards successfully withdrawn for tasks in datapool ${datapoolNftAddress} for dataset ${dataset}, details:${pretty({
-          dataset, datapoolContractAddress, txHash,
+        `Version reward successfully withdrawn for version id ${versionid} in datapool ${datapoolNftAddress} for dataset ${dataset}, details:${pretty({
+          dataset, datapoolContractAddress, versionid, txHash,
         })}`,
         {
-          raw: { address: dataset, datapoolContractAddress, hash: txHash },
+          raw: { address: dataset, datapoolContractAddress, versionid, hash: txHash },
         },
       );
     } catch (error) {

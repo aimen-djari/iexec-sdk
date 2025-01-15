@@ -118,7 +118,7 @@ export const desc = {
   checkObj: (objName, obj) => `check if ${obj} is allowed in ${objName}`,
   whitelistObj: (objName, obj) => `${obj} whitelist of ${objName} (only for WhitelistedDatapool)`,
   setPriceObj: (objName, priceObj) => `set ${priceObj} price of ${objName}`,
-  createTaskObj: (objName) => `create a ${objName} task`,
+  createOrderObj: (objName) => `create a ${objName} order`,
   joinObj: (objName) => `join a ${objName}`,
   leaveObj: (objName) => `leave a ${objName}`,
   withdrawObj: (objName, obj) => `withdraw ${obj} of ${objName}`,
@@ -311,6 +311,7 @@ export const option = {
     'specify maximum tags (exclude not listed tags)\n* usage: --max-tag tag1,tag2',
   ],
   tag: () => ['--tag <tag>', 'specify exact tags\n* usage: --tag tag1,tag2'],
+  volume: () => ['--volume <integer>', 'specify volume'],
   minVolume: () => ['--min-volume <integer>', 'specify minimum volume'],
   minTrust: () => ['--min-trust <integer>', 'specify minimum trust'],
   maxTrust: () => ['--max-trust <integer>', 'specify maximum trust'],
@@ -408,7 +409,7 @@ export const option = {
     'Set the fee for the datapool owner.',
   ],
   datasetAddress: () => [
-    '--dataset-address <address>',
+    '--dataset <address>',
     'Set the dataset address.',
   ],
   datapoolAddress: () => [

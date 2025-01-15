@@ -98,7 +98,7 @@ export default class IExecDatapoolModule extends IExecModule {
    *
    * @example
    * ```js
-   * const { address } = await deployDatapool({
+   * const { address } = await createDatapool({
    *   owner: userAddress,
    *   ownerPrice: '1000',
    *   datasetPrice: '500',
@@ -122,20 +122,6 @@ export default class IExecDatapoolModule extends IExecModule {
   showDatapoolState(datapoolAddress: Addressish): Promise<DatapoolState>;
 
   /**
-   * Add an allowed app to the datapool
-   *
-   * @example
-   * ```js
-   * const success = await addAllowedApp(datapoolAddress, appAddress);
-   * console.log('App allowed:', success);
-   * ```
-   */
-  addAllowedApp(
-    datapoolAddress: Addressish,
-    appAddress: Addressish,
-  ): Promise<boolean>;
-
-  /**
    * Check if an app is allowed in the datapool
    *
    * @example
@@ -147,20 +133,6 @@ export default class IExecDatapoolModule extends IExecModule {
   isAppAllowed(
     datapoolAddress: Addressish,
     appAddress: Addressish,
-  ): Promise<boolean>;
-
-  /**
-   * Add an allowed workerpool to the datapool
-   *
-   * @example
-   * ```js
-   * const success = await addAllowedWorkerpool(datapoolAddress, workerpoolAddress);
-   * console.log('Workerpool allowed:', success);
-   * ```
-   */
-  addAllowedWorkerpool(
-    datapoolAddress: Addressish,
-    workerpoolAddress: Addressish,
   ): Promise<boolean>;
 
   /**
@@ -206,20 +178,20 @@ export default class IExecDatapoolModule extends IExecModule {
   ): Promise<boolean>;
 
   /**
-   * Create a task using the datapool
+   * Create a datapool order
    *
    * @example
    * ```js
-   * const task = await createDatapoolTask(datapoolAddress, appOrder, workerpoolOrder, requestOrder);
-   * console.log('Task created:', task);
+   * const order = await createDatapoolOrder(datapoolAddress, appOrder, workerpoolOrder, requestOrder);
+   * console.log('Order created:', order);
    * ```
    */
-  createDatapoolTask(
+  createDatapoolOrder(
     datapoolAddress: Addressish,
-    appOrder: any,
-    workerpoolOrder: any,
-    requestOrder: any,
-  ): Promise<{ taskId: Bytes32; txHash: TxHash }>;
+    app: any,
+    workerpoo: any,
+    volume: any,
+  ): Promise<{ datapoolorder: Bytes32; txHash: TxHash }>;
 
   /**
    * Create an `IExecDatapoolModule` instance using an `IExecConfig` instance

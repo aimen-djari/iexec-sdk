@@ -2,13 +2,13 @@ import IExecModule from './IExecModule.js';
 import {
   createDatapool,
   showDatapoolState,
-  addAllowedApp,
-  addAllowedWorkerpool,
+  showVersionReward,
+  showAllVersionsRewards,
   isAppAllowed,
   isWorkerpoolAllowed,
   setDatapoolOwnerPrice,
   setDatasetPrice,
-  createDatapoolTask,
+  createDatapoolOrder,
   approveRequestToAddDataset,
   declineRequestToAddDataset,
   isDatasetInWaitingList,
@@ -23,26 +23,28 @@ export default class IExecDatapoolModule extends IExecModule {
 
     this.createDatapool = async (obj) =>
     createDatapool(await this.config.resolveContractsClient(), obj);
+
     this.showDatapoolState = async (datapoolNftAddress) =>
     showDatapoolState(await this.config.resolveContractsClient(), datapoolNftAddress);
 
+    this.showVersionReward = async (datapoolNftAddress, versionid, datasetAddress) =>
+    showVersionReward(await this.config.resolveContractsClient(), datapoolNftAddress, versionid, datasetAddress);
+    this.showAllVersionsRewards = async (datapoolNftAddress, datasetAddress) =>
+    showAllVersionsRewards(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+
     this.isAppAllowed = async (datapoolNftAddress, appAddress) =>
     isAppAllowed(await this.config.resolveContractsClient(), datapoolNftAddress, appAddress);
-    this.addAllowedApp = async (datapoolNftAddress, appAddress) =>
-    addAllowedApp(await this.config.resolveContractsClient(), datapoolNftAddress, appAddress);
 
     this.isWorkerpoolAllowed = async (datapoolNftAddress, workerpoolAddress) =>
     isWorkerpoolAllowed(await this.config.resolveContractsClient(), datapoolNftAddress, workerpoolAddress);
-    this.addAllowedWorkerpool = async (datapoolNftAddress, workerpoolAddress) =>
-    addAllowedWorkerpool(await this.config.resolveContractsClient(), datapoolNftAddress, workerpoolAddress);
 
     this.setDatapoolOwnerPrice = async (datapoolNftAddress, datapoolOwnerPrice) =>
     setDatapoolOwnerPrice(await this.config.resolveContractsClient(), datapoolNftAddress, datapoolOwnerPrice);
     this.setDatasetPrice = async (datapoolNftAddress, datasetPrice) =>
     setDatasetPrice(await this.config.resolveContractsClient(), datapoolNftAddress, datasetPrice);
 
-    this.createDatapoolTask = async (datapoolNftAddress, appOrder, workerpoolOrder, requestOrder) =>
-    createDatapoolTask(await this.config.resolveContractsClient(), datapoolNftAddress, appOrder, workerpoolOrder, requestOrder);
+    this.createDatapoolOrder = async (datapoolNftAddress, app, workerpool, volume) =>
+    createDatapoolOrder(await this.config.resolveContractsClient(), datapoolNftAddress, app, workerpool, volume);
 
     this.approveRequestToAddDataset = async (datapoolNftAddress, datasetAddress) =>
     approveRequestToAddDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);

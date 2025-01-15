@@ -5,8 +5,8 @@ import {
   checkSigner,
 } from '../utils/utils.js';
 import {
-  deployDatapool,
-  showDatapool,
+  deployDataset,
+  showDataset,
 } from './registries.js';
 import {
   uint256Schema,
@@ -22,6 +22,7 @@ import { wrapCall, wrapSend, wrapWait } from '../utils/errorWrappers.js';
 import {
   DATAPOOL_IMPLEMENTATION,
 } from '../utils/constant.js';
+import { dataset } from '../../cli/utils/templates.js';
 
 const debug = Debug('iexec:protocol:datapool');
 
@@ -78,10 +79,10 @@ export const createDatapool = async (
       name: vDatapool.implementation,
       multiaddr: datapoolAddress,
       checksum:
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        '0x36b5d1729e99a9beaeec4bd1eac62b8ed6306bfa7b7c06cf91f64a65a0ca5b87',
     };
 
-    const { address: datapoolNftAddress } = await deployDatapool(
+    const { address: datapoolNftAddress } = await deployDataset(
       contracts,
       datapoolNft,
     );
@@ -140,13 +141,13 @@ export const showDatapoolState = async (
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
     const rawDatapoolState = await wrapCall(datapoolContract.showDatapool());
 
-    const allowedAppCountDisplay = bigIntToBn(rawDatapoolState.allowedAppCount).isZero()
+    const allowedAppCountDisplay = bigIntToBn(rawDatapoolState.allowedAppsCount).isZero()
     ? "infinite"
-    : bigIntToBn(rawDatapoolState.allowedAppCount).toString();
+    : bigIntToBn(rawDatapoolState.allowedAppsCount).toString();
 
-    const allowedWorkerpoolCountDisplay = bigIntToBn(rawDatapoolState.allowedWorkerpoolCount).isZero()
+    const allowedWorkerpoolCountDisplay = bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).isZero()
     ? "infinite"
-    : bigIntToBn(rawDatapoolState.allowedWorkerpoolCount).toString();
+    : bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).toString();
 
     const formattedDatasets = rawDatapoolState.datasets.map(
       ({ dataset, isActive }) => `${dataset}: ${isActive ? 'active' : 'inactive'}`
@@ -154,13 +155,20 @@ export const showDatapoolState = async (
     
     const datapoolState = {
       implementation: datapoolNft.datasetName,
-      datapoolOwner: rawDatapoolState.datapoolOwner,
-      activeDatasetCount:  bigIntToBn(rawDatapoolState.activeDatasetCount).toString(),
+      datapoolOwner: rawDatapoolState.owner,
+      version: {
+        id: bigIntToBn(rawDatapoolState.version).toString(),
+        timestamp: bigIntToBn(rawDatapoolState.versionTimestamp).toString(),
+        datasetCount: bigIntToBn(rawDatapoolState.versionDatasetCount).toString(),
+      },
+      activeDatasetCount:  bigIntToBn(rawDatapoolState.currentDatasetCount).toString(),
       ...(datapoolNft.datasetName === DATAPOOL_IMPLEMENTATION.WHITELIST && { whitelistedDatasetCount: bigIntToBn(await wrapCall(datapoolContract.whitelistCount())).toString() }),
-      minimalDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.minimalDatapoolOwnerPrice).toString(),
-      minimalDatasetPrice:  bigIntToBn(rawDatapoolState.minimalDatasetPrice).toString(),
-      currentDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.currentDatapoolOwnerPrice).toString(),
-      currentDatasetPrice:  bigIntToBn(rawDatapoolState.currentDatasetPrice).toString(),
+      pricingPolicy: {
+        minimalDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.minimalDatapoolOwnerPrice).toString(),
+        minimalDatasetPrice:  bigIntToBn(rawDatapoolState.minimalDatasetPrice).toString(),
+        currentDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.currentDatapoolOwnerPrice).toString(),
+        currentDatasetPrice:  bigIntToBn(rawDatapoolState.currentDatasetPrice).toString(),
+      },
       allowedAppCount: allowedAppCountDisplay,
       allowedWorkerpoolCount: allowedWorkerpoolCountDisplay,
       datasets:  formattedDatasets,
@@ -393,56 +401,6 @@ export const removeDataset = async (
   }
 };
 
-export const withdrawTaskReward = async (
-  contracts = throwIfMissing(),
-  datapoolNftAddress = throwIfMissing(),
-  datasetAddress = throwIfMissing(),
-  taskid = throwIfMissing(),
-) => {
-  try {
-    checkSigner(contracts);
-
-    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
-    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
-    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
-    const vDatasetAddress = await addressSchema().validate(datasetAddress);
-    const vTaskid = await bytes32Schema().validate(taskid);
-
-    const tx = await wrapSend(datapoolContract.withdrawTaskReward(vTaskid, vDatasetAddress));
-    await wrapWait(tx.wait(contracts.confirms));
-    const txHash = tx.hash;
-
-    return { dataset: vDatasetAddress, datapoolContractAddress: vDatapoolAddress, taskid: vTaskid, txHash };
-  } catch (error) {
-    debug('withdrawTaskReward()', error);
-    throw error;
-  }
-};
-
-export const withdrawAllTasksRewards = async (
-  contracts = throwIfMissing(),
-  datapoolNftAddress = throwIfMissing(),
-  datasetAddress = throwIfMissing(),
-) => {
-  try {
-    checkSigner(contracts);
-
-    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
-    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
-    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
-    const vDatasetAddress = await addressSchema().validate(datasetAddress);
-
-    const tx = await wrapSend(datapoolContract.withdrawAllTasksRewards(vDatasetAddress));
-    await wrapWait(tx.wait(contracts.confirms));
-    const txHash = tx.hash;
-
-    return { dataset: vDatasetAddress, datapoolContractAddress: vDatapoolAddress, txHash };
-  } catch (error) {
-    debug('withdrawAllTasksRewards()', error);
-    throw error;
-  }
-};
-
 export const isAppAllowed = async (
   contracts = throwIfMissing(),
   datapoolNftAddress = throwIfMissing(),
@@ -456,7 +414,7 @@ export const isAppAllowed = async (
 
     const rawDatapoolState = await wrapCall(datapoolContract.showDatapool());
 
-    let appAllowed = bigIntToBn(rawDatapoolState.allowedAppCount).isZero();
+    let appAllowed = bigIntToBn(rawDatapoolState.allowedAppsCount).isZero();
 
     if (!appAllowed){
       appAllowed = await wrapCall(
@@ -467,33 +425,6 @@ export const isAppAllowed = async (
 
   } catch (error) {
     debug('isAppAllowed()', error);
-    throw error;
-  }
-};
-
-export const addAllowedApp = async (
-  contracts = throwIfMissing(),
-  datapoolNftAddress = throwIfMissing(),
-  app = throwIfMissing(),
-) => {
-  try {
-    checkSigner(contracts);
-
-    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
-    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
-    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
-    
-    const vApp = await addressSchema().validate(app);
-
-    const tx = await wrapCall(
-      datapoolContract.addAllowedApp(vApp),
-    );
-    await wrapWait(tx.wait(contracts.confirms));
-
-    const txHash = tx.hash;
-    return { datapoolContractAddress: vDatapoolAddress, txHash };
-  } catch (error) {
-    debug('addAllowedApp()', error);
     throw error;
   }
 };
@@ -511,7 +442,7 @@ export const isWorkerpoolAllowed = async (
 
     const rawDatapoolState = await wrapCall(datapoolContract.showDatapool());
 
-    let workerpoolAllowed = bigIntToBn(rawDatapoolState.allowedWorkerpoolCount).isZero();
+    let workerpoolAllowed = bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).isZero();
 
     if (!workerpoolAllowed){
       workerpoolAllowed = await wrapCall(
@@ -523,32 +454,6 @@ export const isWorkerpoolAllowed = async (
 
   } catch (error) {
     debug('isWorkerpoolAllowed()', error);
-    throw error;
-  }
-};
-
-export const addAllowedWorkerpool = async (
-  contracts = throwIfMissing(),
-  datapoolNftAddress = throwIfMissing(),
-  workerpool = throwIfMissing(),
-) => {
-  try {
-    checkSigner(contracts);
-
-    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
-    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
-    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
-    const vWorkerpool = await addressSchema().validate(workerpool);
-
-    const tx = await wrapCall(
-      datapoolContract.addAllowedWorkerpool(vWorkerpool),
-    );
-    await wrapWait(tx.wait(contracts.confirms));
-
-    const txHash = tx.hash;
-    return { datapoolContractAddress: vDatapoolAddress, txHash };
-  } catch (error) {
-    debug('addAllowedWorkerpool()', error);
     throw error;
   }
 };
@@ -651,12 +556,12 @@ export const getActiveDatasetsInDatapoolForTask = async (
   }
 };
 
-export const createDatapoolTask = async (
+export const createDatapoolOrder = async (
   contracts = throwIfMissing(),
   datapoolNftAddress = throwIfMissing(),
-  appOrder = throwIfMissing(),
-  workerpoolOrder = throwIfMissing(),
-  requestOrder = throwIfMissing(),
+  app = throwIfMissing(),
+  workerpool = throwIfMissing(),
+  volume = throwIfMissing(),
 ) => {
   try {
     checkSigner(contracts);
@@ -665,30 +570,122 @@ export const createDatapoolTask = async (
     const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
 
-    const [vAppOrder, vWorkerpoolOrder, vRequestOrder] =
+    const [vApp, vWorkerpool, vVolume] =
       await Promise.all([
-        signedApporderSchema().validate(appOrder),
-        signedWorkerpoolorderSchema().validate(workerpoolOrder),
-        signedRequestorderSchema().validate(requestOrder),
+        addressSchema().validate(app),
+        addressSchema().validate(workerpool),
+        uint256Schema().validate(volume),
       ]);
 
       
     const tx = await wrapSend(
-      datapoolContract.createTask(vAppOrder, vWorkerpoolOrder, vRequestOrder),
+      datapoolContract.createSignedDatapoolOrder(vApp, vWorkerpool, vVolume),
     );
     const txReceipt = await wrapWait(tx.wait(contracts.confirms));
     const logs = getEventFromLogs(
-      'DatapoolTaskCreated',
+      'DatapoolOrderCreated',
       txReceipt.logs,
       {
         strict: true,
       },
     ).args;
-    const taskid = logs.taskid;
+    
+    const datapoolorder = {
+      dataset: logs.datapoolorder.dataset,
+		  datasetprice: bigIntToBn(logs.datapoolorder.datasetprice).toString(),
+		  volume: bigIntToBn(logs.datapoolorder.volume).toString(),
+		  tag: logs.datapoolorder.tag,
+		  apprestrict: logs.datapoolorder.apprestrict,
+      workerpoolrestrict: logs.datapoolorder.workerpoolrestrict,
+      requesterrestrict: logs.datapoolorder.requesterrestrict,
+		  deadline: bigIntToBn(logs.datapoolorder.deadline).toString(),
+		  salt: logs.datapoolorder.salt,
+		  sign: logs.datapoolorder.sign,
+    }
 
-    return { datapoolContractAddress: vDatapoolAddress, taskid };
+    return { datapoolContractAddress: vDatapoolAddress, datapoolorder };
   } catch (error) {
-    debug('createTask()', error);
+    debug('createDatapoolOrder()', error);
+    throw error;
+  }
+};
+
+export const withdrawVersionReward = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+  versionid = throwIfMissing(),
+) => {
+  try {
+    checkSigner(contracts);
+
+    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
+    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
+    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
+    const vDatasetAddress = await addressSchema().validate(datasetAddress);
+    const vVersionId = await uint256Schema().validate(versionid);
+
+    const tx = await wrapSend(datapoolContract.withdrawVersionReward(vVersionId, vDatasetAddress));
+    await wrapWait(tx.wait(contracts.confirms));
+    const txHash = tx.hash;
+
+    return { dataset: vDatasetAddress, datapoolContractAddress: vDatapoolAddress, versionid: vVersionId, txHash };
+  } catch (error) {
+    debug('withdrawVersionReward()', error);
+    throw error;
+  }
+};
+
+export const showVersionReward = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  versionid = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+) => {
+  try {
+    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
+    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
+    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
+    const vVersionid = await uint256Schema().validate(versionid);
+    const vDatasetAddress = await addressSchema().validate(datasetAddress);
+    const version = await wrapCall(datapoolContract.versions(vVersionid));
+    const versionRewardClaimed = await wrapCall(datapoolContract.versionRewardClaimed(vVersionid, vDatasetAddress));
+    
+    const reward = bigIntToBn(version.accumulatedReward).toString();
+    const claimable = (bigIntToBn(version.accumulatedReward) - bigIntToBn(versionRewardClaimed)).toString();
+
+    return { datapoolContractAddress: vDatapoolAddress, reward, claimable };
+  } catch (error) {
+    debug('showVersionReward()', error);
+    throw error;
+  }
+};
+
+export const showAllVersionsRewards = async (
+  contracts = throwIfMissing(),
+  datapoolNftAddress = throwIfMissing(),
+  datasetAddress = throwIfMissing(),
+) => {
+  try {
+    const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
+    const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
+    const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
+    const currentVersionid = await wrapCall(datapoolContract.versionid());
+
+    const result = {};
+    for (let versionid = 1; versionid <= bigIntToBn(currentVersionid); versionid++) {
+      const { reward, claimable } = await showVersionReward(contracts, datapoolNftAddress, versionid, datasetAddress);
+
+      result[versionid] = {
+          reward: reward,
+          claimable: claimable
+      };
+    }
+    
+
+    return { datapoolContractAddress: vDatapoolAddress, result };
+  } catch (error) {
+    debug('showAllVersionsRewards()', error);
     throw error;
   }
 };
@@ -698,7 +695,7 @@ const showDatapoolNft = async (
   datapoolNftAddress = throwIfMissing(),
 ) => {
   try {
-    const {dataset: datapoolNft} = await showDatapool(contracts, datapoolNftAddress);
+    const {dataset: datapoolNft} = await showDataset(contracts, datapoolNftAddress);
 
     return datapoolNft;
   } catch (error) {

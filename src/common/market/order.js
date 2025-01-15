@@ -101,6 +101,7 @@ const objDesc = {
       { name: 'apprestrict', type: 'address' },
       { name: 'workerpoolrestrict', type: 'address' },
       { name: 'requesterrestrict', type: 'address' },
+      { name: 'deadline', type: 'uint256' },
       { name: 'salt', type: 'bytes32' },
     ],
     contractPropName: 'dataset',
@@ -943,6 +944,7 @@ export const createDatasetorder = async (
   requesterrestrict: await addressSchema({
     ethProvider: contracts.provider,
   }).validate(requesterrestrict),
+  deadline: await uint256Schema().validate(0),
 });
 
 export const createWorkerpoolorder = async (

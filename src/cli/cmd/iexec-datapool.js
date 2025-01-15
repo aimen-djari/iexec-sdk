@@ -5,13 +5,11 @@ import BN from 'bn.js';
 import {
   createDatapool,
   showDatapoolState,
-  addAllowedApp,
-  addAllowedWorkerpool,
   isAppAllowed,
   isWorkerpoolAllowed,
   setDatapoolOwnerPrice,
   setDatasetPrice,
-  createDatapoolTask,
+  createDatapoolOrder,
   approveRequestToAddDataset,
   declineRequestToAddDataset,
   isDatasetInWaitingList,
@@ -243,74 +241,6 @@ show
       handleError(error, cli, opts);
     }
   });
-/*
-const updatePolicy = cli.command('update-policy [address]')
-  .description('Update datapool policy');
-  */
-
-const addApp = cli.command('add-allowed-app [appAddress]');
-addGlobalOptions(addApp);
-addWalletLoadOptions(addApp);
-addApp
-  .option(...option.chain())
-  .option(...option.txGasPrice())
-  .option(...option.txConfirms())
-  .option(...option.datapoolAddress())
-  .option(...option.skipPreflightCheck())
-  .description(desc.addObj(objName, 'app'))
-  .action(async (app, opts) => {
-    await checkUpdate(opts);
-    const spinner = Spinner(opts);
-    try {
-      const walletOptions = computeWalletLoadOptions(opts);
-      const txOptions = await computeTxOptions(opts);
-      const keystore = Keystore(walletOptions);
-      const [chain] = await Promise.all([
-        loadChain(opts.chain, { txOptions, spinner }),
-      ]);
-
-      const datapoolNftAddress =
-        opts.datapoolAddress ||
-        (await loadDeployedObj(objName).then(
-          (deployedObj) => deployedObj && deployedObj[chain.id],
-        ));
-
-      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
-
-      if (!opts.skipPreflightCheck) {
-        const { appAllowed } = await isAppAllowed(
-          chain.contracts,
-          datapoolNftAddress,
-          app,
-        );
-        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
-
-        const allowedAppCount = datapoolState.allowedAppCount;
-
-        if (appAllowed && allowedAppCount !== 'infinite') {
-          throw Error(
-            `Requirements check failed: App already allowed (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        }
-      }
-
-      await connectKeystore(chain, keystore, { txOptions });
-      spinner.start(info.updating(objName));
-
-      const { datapoolContractAddress, txHash } = await addAllowedApp(
-        chain.contracts,
-        datapoolNftAddress,
-        app,
-      );
-
-      spinner.succeed(`Added app ${app} to datapool ${datapoolContractAddress}`, {
-        raw: { app, datapoolContractAddress, txHash },
-      });
-    } catch (error) {
-      handleError(error, cli, opts);
-    }
-  });
 
 const checkApp = cli.command('check-allowed-app [appAddress]');
 addGlobalOptions(checkApp);
@@ -355,69 +285,6 @@ checkApp
 
       spinner.succeed(`${message}`, {
         raw: { app, datapoolContractAddress, appAllowed },
-      });
-    } catch (error) {
-      handleError(error, cli, opts);
-    }
-  });
-
-const addWorkerpool = cli.command('add-allowed-workerpool [workerpoolAddress]');
-addGlobalOptions(addWorkerpool);
-addWalletLoadOptions(addWorkerpool);
-addWorkerpool
-  .option(...option.chain())
-  .option(...option.txGasPrice())
-  .option(...option.txConfirms())
-  .option(...option.datapoolAddress())
-  .option(...option.skipPreflightCheck())
-  .description(desc.addObj(objName, 'workerpool'))
-  .action(async (workerpool, opts) => {
-    await checkUpdate(opts);
-    const spinner = Spinner(opts);
-    try {
-      const walletOptions = computeWalletLoadOptions(opts);
-      const txOptions = await computeTxOptions(opts);
-      const keystore = Keystore(walletOptions);
-      const [chain] = await Promise.all([
-        loadChain(opts.chain, { txOptions, spinner }),
-      ]);
-      const datapoolNftAddress =
-        opts.datapoolAddress ||
-        (await loadDeployedObj(objName).then(
-          (deployedObj) => deployedObj && deployedObj[chain.id],
-        ));
-
-      if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
-
-      if (!opts.skipPreflightCheck) {
-        const { workerpoolAllowed } = await isWorkerpoolAllowed(
-          chain.contracts,
-          datapoolNftAddress,
-          workerpool,
-        );
-
-        const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
-        const allowedWorkerpoolCount = datapoolState.allowedWorkerpoolCount;
-
-        if (workerpoolAllowed && allowedWorkerpoolCount !== 'infinite') {
-          throw Error(
-            `Requirements check failed: Workerpool already allowed (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        }
-      }
-
-      await connectKeystore(chain, keystore, { txOptions });
-      spinner.start(info.updating(objName));
-
-      const { datapoolContractAddress, txHash } = await addAllowedWorkerpool(
-        chain.contracts,
-        datapoolNftAddress,
-        workerpool,
-      );
-
-      spinner.succeed(`Added workerpool ${workerpool} to datapool ${datapoolContractAddress}`, {
-        raw: { workerpool, datapoolContractAddress, txHash },
       });
     } catch (error) {
       handleError(error, cli, opts);
@@ -931,7 +798,7 @@ checkWhitelist
   });
 
 
-const fill = cli.command('create-task [datapoolNftAddress]');
+const fill = cli.command('create-order [datapoolNftAddress]');
 addGlobalOptions(fill);
 addWalletLoadOptions(fill);
 fill
@@ -939,12 +806,10 @@ fill
   .option(...option.txGasPrice())
   .option(...option.txConfirms())
   .option(...option.force())
-  .option(...option.fillAppOrder())
-  .option(...option.fillWorkerpoolOrder())
-  .option(...option.fillRequestOrder())
-  .option(...option.fillRequestParams())
-  .option(...option.skipPreflightCheck())
-  .description(desc.createTaskObj(objName))
+  .option(...option.includeAppSpecific())
+  .option(...option.includeWorkerpoolSpecific())
+  .option(...option.volume())
+  .description(desc.createOrderObj(objName))
   .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
     const spinner = Spinner(opts);
@@ -952,9 +817,8 @@ fill
       const walletOptions = computeWalletLoadOptions(opts);
       const txOptions = await computeTxOptions(opts);
       const keystore = Keystore(walletOptions);
-      const [chain, signedOrders] = await Promise.all([
+      const [chain] = await Promise.all([
         loadChain(opts.chain, { txOptions, spinner }),
-        loadSignedOrders(),
       ]);
 
       const datapoolNftAddress =
@@ -963,196 +827,32 @@ fill
           (deployedObj) => deployedObj && deployedObj[chain.id],
         ));
 
-      const getOrderByHash = async (orderName, orderHash) => {
-        if (isBytes32(orderHash, { strict: false })) {
-          spinner.info(
-            `Fetching ${orderName} ${orderHash} from iexec marketplace`,
-          );
-          const orderRes = await fetchPublishedOrderByHash(
-            getPropertyFormChain(chain, 'iexecGateway'),
-            orderName,
-            chain.id,
-            orderHash,
-          );
-          if (!orderRes) {
-            throw Error(
-              `${orderName} ${orderHash} is not published on iexec marketplace`,
-            );
-          }
-          return orderRes.order;
-        }
-        throw Error(`Invalid ${orderName} hash`);
-      };
-      const appOrder = opts.app
-        ? await getOrderByHash(APP_ORDER, opts.app)
-        : signedOrders[chain.id].apporder;
-      const workerpoolOrder = opts.workerpool
-        ? await getOrderByHash(WORKERPOOL_ORDER, opts.workerpool)
-        : signedOrders[chain.id].workerpoolorder;
-      const requestOrder = opts.request
-        ? await getOrderByHash(REQUEST_ORDER, opts.request)
-        : signedOrders[chain.id].requestorder;
+      const app = opts.app;
+      const workerpool = opts.workerpool;
+      const volume = opts.volume;
 
-      if (!appOrder) throw new Error('Missing apporder');
-      if (!workerpoolOrder) throw new Error('Missing workerpoolorder');
-      if (!requestOrder) throw new Error('Missing requestorder');
-
-      if (!opts.skipPreflightCheck) {
-        getRemainingVolume(
-          chain.contracts,
-          WORKERPOOL_ORDER,
-          workerpoolOrder,
-        ).then((volume) => {
-          if (volume.lte(new BN(0)))
-            throw new Error('workerpoolorder is fully consumed');
-          return volume;
-        })
-
-        getRemainingVolume(
-          chain.contracts,
-          APP_ORDER,
-          appOrder,
-        ).then((volume) => {
-          if (volume.lte(new BN(0)))
-            throw new Error('apporder is fully consumed');
-          return volume;
-        })
-
-        getRemainingVolume(
-          chain.contracts,
-          REQUEST_ORDER,
-          requestOrder,
-        ).then((volume) => {
-          if (volume.lte(new BN(0)))
-            throw new Error('requestorder is fully consumed');
-          return volume;
-        })
-
-
-        const resolvedTag = sumTags([
-          (
-            await requestorderSchema()
-              .label('requestorder')
-              .validate(requestOrder)
-          ).tag,
-          (await apporderSchema().label('apporder').validate(appOrder)).tag,
-        ]);
-        await checkAppRequirements(
-          {
-            contracts: chain.contracts,
-          },
-          appOrder,
-          { tagOverride: resolvedTag },
-        ).catch((e) => {
-          throw Error(
-            `App requirements check failed: ${e.message
-            } (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        });
-        await checkRequestRequirements(
-          {
-            contracts: chain.contracts,
-            smsURL: getSmsUrlFromChain(chain, {
-              teeFramework: await resolveTeeFrameworkFromTag(resolvedTag),
-            }),
-          },
-          requestOrder,
-        ).catch((e) => {
-          throw Error(
-            `Request requirements check failed: ${e.message
-            } (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        });
-
-        await checkDatapoolRequirements(
-          chain.contracts,
-          datapoolNftAddress,
-          appOrder.app,
-          workerpoolOrder.workerpool,
-          requestOrder,
-        ).catch((e) => {
-          throw Error(
-            `Datapool requirements check failed: ${e.message
-            } (If you consider this is not an issue, use ${option.skipPreflightCheck()[0]
-            } to skip preflight requirement check)`,
-          );
-        });
-      }
+      if (!app) throw new Error('Missing app');
+      if (!workerpool) throw new Error('Missing workerpool');
+      if (!volume) throw new Error('Missing volume');
 
       await connectKeystore(chain, keystore, { txOptions });
-      spinner.start(info.creating(`${objName} task`));
+      spinner.start(info.creating(`${objName} order`));
 
-      const { taskid } = await createDatapoolTask(
+      const { datapoolorder } = await createDatapoolOrder(
         chain.contracts,
         datapoolNftAddress,
-        appOrder,
-        workerpoolOrder,
-        requestOrder,
+        app,
+        workerpool,
+        volume,
       );
       spinner.succeed(
-        `datapool task successfully purchased with taskid ${taskid}`,
-        { raw: { taskid } },
+        `datapool order successfully created: ${datapoolorder}`,
+        { raw: { datapoolorder } },
       );
     } catch (error) {
       handleError(error, cli, opts);
     }
   });
-
-const checkDatapoolRequirements = async (
-  contracts = throwIfMissing(),
-  datapoolNftAddress = throwIfMissing(),
-  app = throwIfMissing(),
-  workerpool = throwIfMissing(),
-  requestOrder = throwIfMissing(),
-) => {
-  const { datapoolState } = await showDatapoolState(contracts, datapoolNftAddress);
-  const activeDatasetCount = datapoolState.activeDatasetCount;
-
-  if (activeDatasetCount === '0') {
-    throw Error(
-      'Datapool is empty, wait for a dataset to join the datapool before creating a task.',
-    );
-  }
-
-  const { appAllowed } = await isAppAllowed(
-    contracts,
-    datapoolNftAddress,
-    app,
-  );
-
-  if (!appAllowed) {
-    throw Error(
-      'App is not allowed for this datapool.',
-    );
-  }
-
-  const { workerpoolAllowed } = await isWorkerpoolAllowed(
-    contracts,
-    datapoolNftAddress,
-    workerpool,
-  );
-
-  if (!workerpoolAllowed) {
-    throw Error(
-      'Workerpool is not allowed for this datapool.',
-    );
-  }
-
-  if (requestOrder.dataset !== datapoolNftAddress) {
-    throw Error(
-      'Dataset in request order does not match the datapool NFT address.',
-    );
-  }
-
-  const price = parseInt(activeDatasetCount) * parseInt(datapoolState.currentDatasetPrice) + parseInt(datapoolState.currentDatapoolOwnerPrice);
-  if (requestOrder.datasetmaxprice < price) {
-    throw Error(
-      `Dataset max price in request order is lower than datapool price (${requestOrder.datasetmaxprice} < ${price}).`,
-    );
-  }
-};
 
 async function checkWaitingListRequirements(chain, datapoolNftAddress, address, dataset) {
   const { datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
