@@ -42,12 +42,12 @@ export const createDatapool = async (
     const iexecContract = contracts.getIExecContract();
 
     const implementationExists = Object.values(DATAPOOL_IMPLEMENTATION).includes(vDatapool.implementation);
-      
-      if(!implementationExists){
-        throw Error(
-          `Implementation ${vDatapool.implementation} does not exist, no contract to deploy.`,
-        );
-      }
+
+    if (!implementationExists) {
+      throw Error(
+        `Implementation ${vDatapool.implementation} does not exist, no contract to deploy.`,
+      );
+    }
 
     const args = [
       vDatapool.datapoolOwnerPrice,
@@ -56,10 +56,10 @@ export const createDatapool = async (
       vDatapool.allowedWorkerpools,
     ];
 
-    if(vDatapool.implementation === DATAPOOL_IMPLEMENTATION.WHITELIST){
+    if (vDatapool.implementation === DATAPOOL_IMPLEMENTATION.WHITELIST) {
       args.push(vDatapool.whitelist);
     }
-    
+
     const tx = await wrapSend(
       datapoolFactoryFunctions[vDatapool.implementation](iexecContract, args, contracts.txOptions),
     );
@@ -142,17 +142,17 @@ export const showDatapoolState = async (
     const rawDatapoolState = await wrapCall(datapoolContract.showDatapool());
 
     const allowedAppCountDisplay = bigIntToBn(rawDatapoolState.allowedAppsCount).isZero()
-    ? "infinite"
-    : bigIntToBn(rawDatapoolState.allowedAppsCount).toString();
+      ? "infinite"
+      : bigIntToBn(rawDatapoolState.allowedAppsCount).toString();
 
     const allowedWorkerpoolCountDisplay = bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).isZero()
-    ? "infinite"
-    : bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).toString();
+      ? "infinite"
+      : bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).toString();
 
     const formattedDatasets = rawDatapoolState.datasets.map(
       ({ dataset, isActive }) => `${dataset}: ${isActive ? 'active' : 'inactive'}`
     );
-    
+
     const datapoolState = {
       implementation: datapoolNft.datasetName,
       datapoolOwner: rawDatapoolState.owner,
@@ -161,17 +161,17 @@ export const showDatapoolState = async (
         timestamp: bigIntToBn(rawDatapoolState.versionTimestamp).toString(),
         datasetCount: bigIntToBn(rawDatapoolState.versionDatasetCount).toString(),
       },
-      activeDatasetCount:  bigIntToBn(rawDatapoolState.currentDatasetCount).toString(),
+      activeDatasetCount: bigIntToBn(rawDatapoolState.currentDatasetCount).toString(),
       ...(datapoolNft.datasetName === DATAPOOL_IMPLEMENTATION.WHITELIST && { whitelistedDatasetCount: bigIntToBn(await wrapCall(datapoolContract.whitelistCount())).toString() }),
       pricingPolicy: {
         minimalDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.minimalDatapoolOwnerPrice).toString(),
-        minimalDatasetPrice:  bigIntToBn(rawDatapoolState.minimalDatasetPrice).toString(),
+        minimalDatasetPrice: bigIntToBn(rawDatapoolState.minimalDatasetPrice).toString(),
         currentDatapoolOwnerPrice: bigIntToBn(rawDatapoolState.currentDatapoolOwnerPrice).toString(),
-        currentDatasetPrice:  bigIntToBn(rawDatapoolState.currentDatasetPrice).toString(),
+        currentDatasetPrice: bigIntToBn(rawDatapoolState.currentDatasetPrice).toString(),
       },
       allowedAppCount: allowedAppCountDisplay,
       allowedWorkerpoolCount: allowedWorkerpoolCountDisplay,
-      datasets:  formattedDatasets,
+      datasets: formattedDatasets,
     }
 
     return { datapoolContractAddress: vDatapoolAddress, datapoolState: datapoolState };
@@ -191,9 +191,9 @@ export const addDataset = async (
 
     const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
 
-    if(datapoolNft.datasetName === DATAPOOL_IMPLEMENTATION.WHITELIST){
+    if (datapoolNft.datasetName === DATAPOOL_IMPLEMENTATION.WHITELIST) {
       const { whitelistedDataset } = await isWhitelistedDataset(contracts, datapoolNftAddress, datasetAddress);
-      if (!whitelistedDataset){
+      if (!whitelistedDataset) {
         throw Error(
           `This dataset is not whitelisted.`
         );
@@ -225,7 +225,7 @@ export const approveRequestToAddDataset = async (
     checkSigner(contracts);
     const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
     checkImplementation(datapoolNft.datasetName, DATAPOOL_IMPLEMENTATION.WAITINGLIST);
-    
+
     const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
     const vDatasetAddress = await addressSchema().validate(datasetAddress);
@@ -251,7 +251,7 @@ export const declineRequestToAddDataset = async (
     checkSigner(contracts);
     const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
     checkImplementation(datapoolNft.datasetName, DATAPOOL_IMPLEMENTATION.WAITINGLIST);
-    
+
     const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
     const vDatasetAddress = await addressSchema().validate(datasetAddress);
@@ -301,7 +301,7 @@ export const addDatasetToWhitelist = async (
     checkSigner(contracts);
     const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
     checkImplementation(datapoolNft.datasetName, DATAPOOL_IMPLEMENTATION.WHITELIST);
-    
+
     const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
     const vDatasetAddress = await addressSchema().validate(datasetAddress);
@@ -327,7 +327,7 @@ export const removeDatasetFromWhitelist = async (
     checkSigner(contracts);
     const datapoolNft = await showDatapoolNft(contracts, datapoolNftAddress);
     checkImplementation(datapoolNft.datasetName, DATAPOOL_IMPLEMENTATION.WHITELIST);
-    
+
     const vDatapoolAddress = await addressSchema().validate(datapoolNft.datasetMultiaddr);
     const datapoolContract = contracts.getContract(datapoolNft.datasetName, vDatapoolAddress);
     const vDatasetAddress = await addressSchema().validate(datasetAddress);
@@ -416,7 +416,7 @@ export const isAppAllowed = async (
 
     let appAllowed = bigIntToBn(rawDatapoolState.allowedAppsCount).isZero();
 
-    if (!appAllowed){
+    if (!appAllowed) {
       appAllowed = await wrapCall(
         datapoolContract.allowedApps(vApp),
       );
@@ -444,12 +444,12 @@ export const isWorkerpoolAllowed = async (
 
     let workerpoolAllowed = bigIntToBn(rawDatapoolState.allowedWorkerpoolsCount).isZero();
 
-    if (!workerpoolAllowed){
+    if (!workerpoolAllowed) {
       workerpoolAllowed = await wrapCall(
         datapoolContract.allowedWorkerpools(vWorkerpool),
       );
     }
-    
+
     return { datapoolContractAddress: vDatapoolAddress, workerpoolAllowed };
 
   } catch (error) {
@@ -577,7 +577,13 @@ export const createDatapoolOrder = async (
         uint256Schema().validate(volume),
       ]);
 
-      
+    const { datapoolState } = await showDatapoolState(
+      contracts,
+      datapoolNftAddress,
+    );
+    if (datapoolState.activeDatasetCount === 0) throw new Error('Datapool is empty at the moment!')
+
+
     const tx = await wrapSend(
       datapoolContract.createSignedDatapoolOrder(vApp, vWorkerpool, vVolume),
     );
@@ -589,18 +595,18 @@ export const createDatapoolOrder = async (
         strict: true,
       },
     ).args;
-    
+
     const datapoolorder = {
       dataset: logs.datapoolorder.dataset,
-		  datasetprice: bigIntToBn(logs.datapoolorder.datasetprice).toString(),
-		  volume: bigIntToBn(logs.datapoolorder.volume).toString(),
-		  tag: logs.datapoolorder.tag,
-		  apprestrict: logs.datapoolorder.apprestrict,
+      datasetprice: bigIntToBn(logs.datapoolorder.datasetprice).toString(),
+      volume: bigIntToBn(logs.datapoolorder.volume).toString(),
+      tag: logs.datapoolorder.tag,
+      apprestrict: logs.datapoolorder.apprestrict,
       workerpoolrestrict: logs.datapoolorder.workerpoolrestrict,
       requesterrestrict: logs.datapoolorder.requesterrestrict,
-		  deadline: bigIntToBn(logs.datapoolorder.deadline).toString(),
-		  salt: logs.datapoolorder.salt,
-		  sign: logs.datapoolorder.sign,
+      deadline: bigIntToBn(logs.datapoolorder.deadline).toString(),
+      salt: logs.datapoolorder.salt,
+      sign: logs.datapoolorder.sign,
     }
 
     return { datapoolContractAddress: vDatapoolAddress, datapoolorder };
@@ -650,7 +656,7 @@ export const showVersionReward = async (
     const vDatasetAddress = await addressSchema().validate(datasetAddress);
     const version = await wrapCall(datapoolContract.versions(vVersionid));
     const versionRewardClaimed = await wrapCall(datapoolContract.versionRewardClaimed(vVersionid, vDatasetAddress));
-    
+
     const reward = bigIntToBn(version.accumulatedReward).toString();
     const claimable = (bigIntToBn(version.accumulatedReward) - bigIntToBn(versionRewardClaimed)).toString();
 
@@ -677,11 +683,11 @@ export const showAllVersionsRewards = async (
       const { reward, claimable } = await showVersionReward(contracts, datapoolNftAddress, versionid, datasetAddress);
 
       result[versionid] = {
-          reward: reward,
-          claimable: claimable
+        reward: reward,
+        claimable: claimable
       };
     }
-    
+
 
     return { datapoolContractAddress: vDatapoolAddress, result };
   } catch (error) {
@@ -695,7 +701,7 @@ const showDatapoolNft = async (
   datapoolNftAddress = throwIfMissing(),
 ) => {
   try {
-    const {dataset: datapoolNft} = await showDataset(contracts, datapoolNftAddress);
+    const { dataset: datapoolNft } = await showDataset(contracts, datapoolNftAddress);
 
     return datapoolNft;
   } catch (error) {
