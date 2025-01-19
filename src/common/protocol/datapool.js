@@ -581,7 +581,7 @@ export const createDatapoolOrder = async (
       contracts,
       datapoolNftAddress,
     );
-    if (datapoolState.activeDatasetCount === 0) throw new Error('Datapool is empty at the moment!')
+    if (datapoolState.activeDatasetCount === "0") throw new Error('Datapool is empty at the moment!')
 
 
     const tx = await wrapSend(
