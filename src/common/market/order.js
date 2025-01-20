@@ -524,7 +524,7 @@ const getMatchableVolume = async (
       }
     };
     const checkDatasetSignAsync = async () => {
-      if (vDatasetOrder.dataset !== NULL_ADDRESS) {
+      if (vDatasetOrder.dataset !== NULL_ADDRESS && vDatasetOrder.sign !== "0x") {
         const isValid = await verifySign(
           contracts,
           await getDatasetOwner(contracts, vDatasetOrder.dataset),

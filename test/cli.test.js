@@ -1335,11 +1335,44 @@ describe('[Mainchain]', () => {
   });
 
   test('[mainchain] iexec datapool create-order [address]', async () => {
-    const raw = await execAsync(
+    let raw = await execAsync(`${iexecPath} order init --raw`);
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBe(mainchainApp);
+    expect(res.workerpoolorder.workerpool).toBe(mainchainWorkerpool);
+    expect(res.requestorder.requester).toBe(ADDRESS);
+    expect(res.requestorder.beneficiary).toBe(ADDRESS);
+    
+    await editRequestorder({
+      app: mainchainApp,
+      dataset: mainchainDatapool,
+      workerpool: mainchainWorkerpool,
+      category: mainchainNoDurationCatid,
+      datasetmaxprice: 2,
+    });
+    await editWorkerpoolorder({
+      category: mainchainNoDurationCatid,
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBeDefined();
+    expect(res.workerpoolorder.workerpool).toBeDefined();
+    expect(res.requestorder.app).toBeDefined();
+
+    raw = await execAsync(
       `${iexecPath} datapool create-order ${mainchainDatapool} --app ${mainchainApp} --workerpool ${mainchainWorkerpool} --volume 1 --raw`,
     );
 
-    const res = JSON.parse(raw);
+    res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolorder).toBeDefined();
     expect(res.datapoolorder.dataset).toEqual(mainchainDatapool);
@@ -1352,6 +1385,16 @@ describe('[Mainchain]', () => {
     expect(parseInt(res.datapoolorder.deadline, 10)).toBeGreaterThan(0);
     expect(res.datapoolorder.salt).toEqual("0x0000000000000000000000000000000000000000000000000000000000000002");
     expect(res.datapoolorder.sign).toEqual("0x");
+
+    raw = await execAsync(
+      `${iexecPath} order fill --raw`,
+    );
+
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.volume).toBe('1');
+    expect(res.dealid).toBeDefined();
+    expect(res.txHash).toBeDefined();
   });
 
   test('[mainchain] iexec dataset show-reward [address] (from deployed.json)', async () => {
@@ -3648,11 +3691,44 @@ describe('[Sidechain]', () => {
   });
 
   test('[sidechain] iexec datapool create-order [address]', async () => {
-    const raw = await execAsync(
+    let raw = await execAsync(`${iexecPath} order init --raw`);
+    let res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBe(sidechainApp);
+    expect(res.workerpoolorder.workerpool).toBe(sidechainWorkerpool);
+    expect(res.requestorder.requester).toBe(ADDRESS);
+    expect(res.requestorder.beneficiary).toBe(ADDRESS);
+    
+    await editRequestorder({
+      app: sidechainApp,
+      dataset: sidechainDatapool,
+      workerpool: sidechainWorkerpool,
+      category: sidechainNoDurationCatid,
+      datasetmaxprice: 2,
+    });
+    await editWorkerpoolorder({
+      category: sidechainNoDurationCatid,
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.apporder).toBeDefined();
+    expect(res.workerpoolorder).toBeDefined();
+    expect(res.requestorder).toBeDefined();
+    expect(res.apporder.app).toBeDefined();
+    expect(res.workerpoolorder.workerpool).toBeDefined();
+    expect(res.requestorder.app).toBeDefined();
+
+    raw = await execAsync(
       `${iexecPath} datapool create-order ${sidechainDatapool} --app ${sidechainApp} --workerpool ${sidechainWorkerpool} --volume 1 --raw`,
     );
 
-    const res = JSON.parse(raw);
+    res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolorder).toBeDefined();
     expect(res.datapoolorder.dataset).toEqual(sidechainDatapool);
@@ -3665,6 +3741,16 @@ describe('[Sidechain]', () => {
     expect(parseInt(res.datapoolorder.deadline, 10)).toBeGreaterThan(0);
     expect(res.datapoolorder.salt).toEqual("0x0000000000000000000000000000000000000000000000000000000000000002");
     expect(res.datapoolorder.sign).toEqual("0x");
+
+    raw = await execAsync(
+      `${iexecPath} order fill --raw`,
+    );
+
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+    expect(res.volume).toBe('1');
+    expect(res.dealid).toBeDefined();
+    expect(res.txHash).toBeDefined();
   });
 
   test('[sidechain] iexec dataset leave-datapool [address] (from deployed.json)', async () => {

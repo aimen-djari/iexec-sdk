@@ -4071,6 +4071,44 @@ describe('[datapool]', () => {
     expect(res.datapoolorder.requesterrestrict).toEqual(requester);
     expect(parseInt(res.datapoolorder.deadline, 10)).toBeGreaterThan(0);
     expect(res.datapoolorder.salt).toEqual("0x0000000000000000000000000000000000000000000000000000000000000002");
+
+    const datapoolorder = res.datapoolorder;
+    let order = await iexec.order.createApporder({
+      app: datapoolApp,
+    });
+    const apporder = await iexec.order.signApporder(order);
+
+    order = await iexec.order.createWorkerpoolorder({
+      workerpool: datapoolWorkerpool,
+      category: 0,
+    });
+
+    const workerpoolorder = await iexec.order.signWorkerpoolorder(order);
+
+    order = await iexec.order.createRequestorder({
+      app: datapoolApp,
+      dataset: datapoolNftAddress,
+      workerpool: datapoolWorkerpool,
+      datasetmaxprice: '3',
+      volume: '1',
+      category: 0,
+    });
+
+    const requestorder = await iexec.order.signRequestorder(order);
+
+    res = await iexec.order.matchOrders(
+      {
+        apporder,
+        datasetorder: datapoolorder,
+        workerpoolorder,
+        requestorder,
+      },
+      { preflightCheck: false },
+    );
+    expect(res.txHash).toMatch(bytes32Regex);
+    expect(res.volume).toBeInstanceOf(BN);
+    expect(res.volume.eq(new BN(1))).toBe(true);
+    expect(res.dealid).toMatch(bytes32Regex);
   });
 
   test('datapool.showVersionReward()', async () => {

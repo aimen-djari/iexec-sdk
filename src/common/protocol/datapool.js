@@ -14,9 +14,7 @@ import {
   addressSchema,
   bytes32Schema,
   datapoolSchema,
-  signedApporderSchema,
-  signedWorkerpoolorderSchema,
-  signedRequestorderSchema,
+  datasetorderSchema,
 } from '../utils/validator.js';
 import { wrapCall, wrapSend, wrapWait } from '../utils/errorWrappers.js';
 import {
@@ -607,7 +605,11 @@ export const createDatapoolOrder = async (
       deadline: bigIntToBn(logs.datapoolorder.deadline).toString(),
       salt: logs.datapoolorder.salt,
       sign: logs.datapoolorder.sign,
-    }
+    };
+
+    await datasetorderSchema({ ethProvider: contracts.provider }).validate(
+      datapoolorder,
+    )
 
     return { datapoolContractAddress: vDatapoolAddress, datapoolorder };
   } catch (error) {

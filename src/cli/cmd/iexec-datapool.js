@@ -23,13 +23,14 @@ import {
   APP_ORDER,
   WORKERPOOL_ORDER,
   REQUEST_ORDER,
+  DATASET_ORDER,
 } from '../../common/utils/constant.js';
 import {
   loadIExecConf,
   initObj,
   saveDeployedObj,
   loadDeployedObj,
-  loadSignedOrders,
+  saveSignedOrder,
 } from '../utils/fs.js';
 import { Keystore } from '../utils/keystore.js';
 import { loadChain, connectKeystore } from '../utils/chains.js';
@@ -845,9 +846,16 @@ fill
         workerpool,
         volume,
       );
+
+      const { fileName } = await saveSignedOrder(
+        DATASET_ORDER,
+        chain.id,
+        datapoolorder,
+      );
+
       spinner.succeed(
-        `datapool order successfully created: ${datapoolorder}`,
-        { raw: { datapoolorder } },
+        `datapool order successfully created: ${pretty(datapoolorder)} and saved in ${fileName}`,
+        { raw: { datapoolorder, fileName } },
       );
     } catch (error) {
       handleError(error, cli, opts);
