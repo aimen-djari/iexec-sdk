@@ -624,6 +624,13 @@ const getMatchableVolume = async (
       ]);
     }
 
+    // deadline check
+    if (vDatasetOrder.dataset !== NULL_ADDRESS && parseInt(vDatasetOrder.deadline, 10) !== 0 && parseInt(vDatasetOrder.deadline, 10) < Math.floor(Date.now() / 1000)) {
+      throw new Error(
+        `dataset order expired, create another one`,
+      );
+    }
+
     // address checks
     if (vRequestOrder.app !== vAppOrder.app) {
       throw new Error(

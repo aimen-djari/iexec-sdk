@@ -21,6 +21,7 @@ export const NULL_DATASETORDER = {
   apprestrict: NULL_ADDRESS,
   workerpoolrestrict: NULL_ADDRESS,
   requesterrestrict: NULL_ADDRESS,
+  deadline: 0,
   salt: NULL_BYTES32,
   sign: NULL_BYTES,
 };

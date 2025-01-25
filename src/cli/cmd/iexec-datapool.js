@@ -198,7 +198,7 @@ addGlobalOptions(show);
 addWalletLoadOptions(show);
 show
   .option(...option.chain())
-  .option(...option.user())
+  .option(...option.all())
   .description(desc.showObj(objName, ''))
   .action(async (cliAddress, opts) => {
     await checkUpdate(opts);
@@ -229,7 +229,9 @@ show
       spinner.start(info.showing(objName));
 
       const { datapoolContractAddress, datapoolState } = await showDatapoolState(chain.contracts, datapoolNftAddress);
-
+      if (!opts.all){
+        delete datapoolState.datasets;
+      }
       spinner.succeed(
         `Datapool ${datapoolNftAddress} with contract address ${datapoolContractAddress} details:${pretty({
           ...datapoolState,

@@ -432,6 +432,10 @@ export const option = {
       '--whitelist <list>',
       'Define which datasets are allowed to join the datapool. Only whitelisted datasets can be added to the pool. Only works with a specific implementation (WhitelistedDatapool).',
   ],
+  all: () => [
+    '--all',
+    'Show list of datasets contained in the datapool.',
+],
 };
 
 export const optionCreator = {

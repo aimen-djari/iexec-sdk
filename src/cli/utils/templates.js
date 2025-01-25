@@ -111,6 +111,7 @@ export const order = {
     apprestrict: '0x0000000000000000000000000000000000000000', // todo remove from default
     workerpoolrestrict: '0x0000000000000000000000000000000000000000', // todo remove from default
     requesterrestrict: '0x0000000000000000000000000000000000000000', // todo remove from default
+    deadline: '0',
   },
   workerpoolorder: {
     workerpool: '0x0000000000000000000000000000000000000000',

@@ -500,6 +500,7 @@ export const datasetorderSchema = (opt) =>
       apprestrict: addressSchema(opt).required(),
       workerpoolrestrict: addressSchema(opt).required(),
       requesterrestrict: addressSchema(opt).required(),
+      deadline: uint256Schema().required(),
     },
     '${originalValue} is not a valid datasetorder',
   );

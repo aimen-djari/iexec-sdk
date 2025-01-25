@@ -428,6 +428,8 @@ describe('[Mainchain]', () => {
   let mainchainDataset;
   let mainchainDatapool;
   let mainchainDatapoolContract;
+  let mainchainDatapoolApp;
+  let mainchainDatapoolWorkerpool;
   let mainchainWorkerpool;
   let mainchainNoDurationCatid;
   let mainchainDealid;
@@ -1080,7 +1082,7 @@ describe('[Mainchain]', () => {
   });
 
   // DATAPOOL
-  test('[common] iexec datapool init (no wallet)', async () => {
+  test('[mainchain] iexec datapool init (no wallet)', async () => {
     await removeWallet();
     const raw = await execAsync(`${iexecPath} datapool init --raw`);
     const res = JSON.parse(raw);
@@ -1089,18 +1091,40 @@ describe('[Mainchain]', () => {
     expect(res.datapool.owner).not.toBe(ADDRESS);
   });
 
-  test('[common] iexec datapool init (+ wallet)', async () => {
+  test('[mainchain] iexec datapool init (+ wallet)', async () => {
     await setRichWallet();
-    const raw = await execAsync(`${iexecPath} datapool init --raw`);
-    const res = JSON.parse(raw);
+    let raw = await execAsync(`${iexecPath} datapool init --raw`);
+    let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapool).toBeDefined();
     expect(res.datapool.owner).toBe(ADDRESS);
+    await execAsync('mv deployed.json deployed.back');
+    await execAsync(
+      `${iexecPath} app init --tee-framework scone --raw`,
+    );
+
+    await setAppUniqueName();
+    raw = await execAsync(`${iexecPath} app deploy --raw`);
+    res = JSON.parse(raw);
+    mainchainDatapoolApp = res.address;
+
+
+    await execAsync(
+      `${iexecPath} workerpool init --raw`,
+    );
+
+    await setWorkerpoolUniqueDescription();
+    raw = await execAsync(`${iexecPath} workerpool deploy --raw`);
+    res = JSON.parse(raw);
+    mainchainDatapoolWorkerpool = res.address;
+
+    await execAsync('mv deployed.json deployed.datapool');
+    await execAsync('mv deployed.back deployed.json');
   });
 
   test('[mainchain] iexec datapool deploy', async () => {
     await setRichWallet();
-    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --app-restrict [${mainchainApp}] --workerpool-restrict [${mainchainWorkerpool}] --raw`);
+    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --app-restrict [${mainchainDatapoolApp}] --workerpool-restrict [${mainchainDatapoolWorkerpool}] --raw`);
     const res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolAddress).toBeDefined();
@@ -1113,7 +1137,7 @@ describe('[Mainchain]', () => {
   });
 
   test('[mainchain] iexec datapool show (from deployed.json)', async () => {
-    const raw = await execAsync(`${iexecPath} datapool show --raw`);
+    const raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     const res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolContractAddress).toBeDefined();
@@ -1135,7 +1159,7 @@ describe('[Mainchain]', () => {
   test('[mainchain] iexec datapool show [datapoolAddress]', async () => {
     await execAsync('mv deployed.json deployed.back');
     const raw = await execAsync(
-      `${iexecPath} datapool show ${mainchainDatapool} --raw`,
+      `${iexecPath} datapool show ${mainchainDatapool} --all --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     const res = JSON.parse(raw);
@@ -1158,14 +1182,14 @@ describe('[Mainchain]', () => {
 
   test('[mainchain] iexec datapool check-allowed-app [address] (from deployed.json)', async () => {
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-app ${mainchainApp} --raw`,
+      `${iexecPath} datapool check-allowed-app ${mainchainDatapoolApp} --raw`,
     );
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.app).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.appAllowed).toBeDefined();
-    expect(res.app).toBe(mainchainApp);
+    expect(res.app).toBe(mainchainDatapoolApp);
     expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
     expect(res.appAllowed).toBe(true);
   });
@@ -1173,7 +1197,7 @@ describe('[Mainchain]', () => {
   test('[mainchain] iexec datapool check-allowed-app [address] (option)', async () => {
     await execAsync('mv deployed.json deployed.back');
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-app ${mainchainApp} --datapool-address ${mainchainDatapool} --raw`,
+      `${iexecPath} datapool check-allowed-app ${mainchainDatapoolApp} --datapool-address ${mainchainDatapool} --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     let res = JSON.parse(raw);
@@ -1181,21 +1205,21 @@ describe('[Mainchain]', () => {
     expect(res.app).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.appAllowed).toBeDefined();
-    expect(res.app).toBe(mainchainApp);
+    expect(res.app).toBe(mainchainDatapoolApp);
     expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
     expect(res.appAllowed).toBe(true);
   });
 
   test('[mainchain] iexec datapool check-allowed-workerpool [address] (from deployed.json)', async () => {
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-workerpool ${mainchainWorkerpool} --raw`,
+      `${iexecPath} datapool check-allowed-workerpool ${mainchainDatapoolWorkerpool} --raw`,
     );
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.workerpool).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.workerpoolAllowed).toBeDefined();
-    expect(res.workerpool).toBe(mainchainWorkerpool);
+    expect(res.workerpool).toBe(mainchainDatapoolWorkerpool);
     expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
     expect(res.workerpoolAllowed).toBe(true);
   });
@@ -1203,7 +1227,7 @@ describe('[Mainchain]', () => {
   test('[mainchain] iexec datapool check-allowed-workerpool [address] (option)', async () => {
     await execAsync('mv deployed.json deployed.back');
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-workerpool ${mainchainWorkerpool} --datapool-address ${mainchainDatapool} --raw`,
+      `${iexecPath} datapool check-allowed-workerpool ${mainchainDatapoolWorkerpool} --datapool-address ${mainchainDatapool} --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     let res = JSON.parse(raw);
@@ -1211,7 +1235,7 @@ describe('[Mainchain]', () => {
     expect(res.workerpool).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.workerpoolAllowed).toBeDefined();
-    expect(res.workerpool).toBe(mainchainWorkerpool);
+    expect(res.workerpool).toBe(mainchainDatapoolWorkerpool);
     expect(res.datapoolContractAddress).toBe(mainchainDatapoolContract);
     expect(res.workerpoolAllowed).toBe(true);
   });
@@ -1305,7 +1329,7 @@ describe('[Mainchain]', () => {
     expect(res.address).toBeDefined();
     expect(res.hash).toBeDefined();
 
-    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
 
@@ -1326,7 +1350,7 @@ describe('[Mainchain]', () => {
     expect(res.address).toBeDefined();
     expect(res.hash).toBeDefined();
 
-    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
 
@@ -1335,41 +1359,55 @@ describe('[Mainchain]', () => {
   });
 
   test('[mainchain] iexec datapool create-order [address]', async () => {
+    await execAsync('mv deployed.json deployed.back');
+    await execAsync('mv deployed.datapool deployed.json');
     let raw = await execAsync(`${iexecPath} order init --raw`);
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.apporder).toBeDefined();
     expect(res.workerpoolorder).toBeDefined();
     expect(res.requestorder).toBeDefined();
-    expect(res.apporder.app).toBe(mainchainApp);
-    expect(res.workerpoolorder.workerpool).toBe(mainchainWorkerpool);
+    expect(res.apporder.app).toBe(mainchainDatapoolApp);
+    expect(res.workerpoolorder.workerpool).toBe(mainchainDatapoolWorkerpool);
     expect(res.requestorder.requester).toBe(ADDRESS);
     expect(res.requestorder.beneficiary).toBe(ADDRESS);
     
     await editRequestorder({
-      app: mainchainApp,
+      app: mainchainDatapoolApp,
       dataset: mainchainDatapool,
-      workerpool: mainchainWorkerpool,
+      workerpool: mainchainDatapoolWorkerpool,
       category: mainchainNoDurationCatid,
       datasetmaxprice: 2,
-    });
-    await editWorkerpoolorder({
-      category: mainchainNoDurationCatid,
+      tag: ['tee', 'scone'],
     });
     raw = await execAsync(
-      `${iexecPath} order sign --skip-preflight-check --raw`,
+      `${iexecPath} order sign --request --skip-preflight-check --raw`,
     );
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
-    expect(res.apporder).toBeDefined();
-    expect(res.workerpoolorder).toBeDefined();
-    expect(res.requestorder).toBeDefined();
-    expect(res.apporder.app).toBeDefined();
-    expect(res.workerpoolorder.workerpool).toBeDefined();
-    expect(res.requestorder.app).toBeDefined();
+
+    await editWorkerpoolorder({
+      category: mainchainNoDurationCatid,
+      tag: ['tee', 'scone'],
+    });
 
     raw = await execAsync(
-      `${iexecPath} datapool create-order ${mainchainDatapool} --app ${mainchainApp} --workerpool ${mainchainWorkerpool} --volume 1 --raw`,
+      `${iexecPath} order sign --workerpool --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    await editApporder({
+      tag: ['tee', 'scone'],
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --app --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    raw = await execAsync(
+      `${iexecPath} datapool create-order ${mainchainDatapool} --app ${mainchainDatapoolApp} --workerpool ${mainchainDatapoolWorkerpool} --volume 1 --raw`,
     );
 
     res = JSON.parse(raw);
@@ -1378,16 +1416,16 @@ describe('[Mainchain]', () => {
     expect(res.datapoolorder.dataset).toEqual(mainchainDatapool);
     expect(res.datapoolorder.datasetprice).toEqual("2");
     expect(res.datapoolorder.volume).toEqual("1");
-    expect(res.datapoolorder.tag).toEqual(NULL_BYTES32);
-    expect(res.datapoolorder.apprestrict).toEqual(mainchainApp);
-    expect(res.datapoolorder.workerpoolrestrict).toEqual(mainchainWorkerpool);
+    expect(res.datapoolorder.tag).toEqual("0x0000000000000000000000000000000000000000000000000000000000000003");
+    expect(res.datapoolorder.apprestrict).toEqual(mainchainDatapoolApp);
+    expect(res.datapoolorder.workerpoolrestrict).toEqual(mainchainDatapoolWorkerpool);
     expect(res.datapoolorder.requesterrestrict).toEqual(ADDRESS);
     expect(parseInt(res.datapoolorder.deadline, 10)).toBeGreaterThan(0);
     expect(res.datapoolorder.salt).toEqual("0x0000000000000000000000000000000000000000000000000000000000000002");
     expect(res.datapoolorder.sign).toEqual("0x");
 
     raw = await execAsync(
-      `${iexecPath} order fill --raw`,
+      `${iexecPath} order fill --skip-preflight-check --raw`,
     );
 
     res = JSON.parse(raw);
@@ -1395,6 +1433,9 @@ describe('[Mainchain]', () => {
     expect(res.volume).toBe('1');
     expect(res.dealid).toBeDefined();
     expect(res.txHash).toBeDefined();
+
+    await execAsync('mv deployed.json deployed.datapool');
+    await execAsync('mv deployed.back deployed.json');
   });
 
   test('[mainchain] iexec dataset show-reward [address] (from deployed.json)', async () => {
@@ -3041,6 +3082,8 @@ describe('[Sidechain]', () => {
   let sidechainDataset;
   let sidechainDatapool;
   let sidechainDatapoolContract;
+  let sidechainDatapoolApp;
+  let sidechainDatapoolWorkerpool;
   let sidechainWorkerpool;
   let sidechainNoDurationCatid;
   let sidechainDealid;
@@ -3436,7 +3479,7 @@ describe('[Sidechain]', () => {
   });
 
   // DATAPOOL
-  test('[common] iexec datapool init (no wallet)', async () => {
+  test('[sidechain] iexec datapool init (no wallet)', async () => {
     await removeWallet();
     const raw = await execAsync(`${iexecPath} datapool init --raw`);
     const res = JSON.parse(raw);
@@ -3445,18 +3488,43 @@ describe('[Sidechain]', () => {
     expect(res.datapool.owner).not.toBe(ADDRESS);
   });
 
-  test('[common] iexec datapool init (+ wallet)', async () => {
+  test('[sidechain] iexec datapool init (+ wallet)', async () => {
     await setRichWallet();
-    const raw = await execAsync(`${iexecPath} datapool init --raw`);
-    const res = JSON.parse(raw);
+    let raw = await execAsync(`${iexecPath} datapool init --raw`);
+    let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapool).toBeDefined();
     expect(res.datapool.owner).toBe(ADDRESS);
+
+
+    await execAsync('mv deployed.json deployed.back');
+    await execAsync(
+      `${iexecPath} app init --tee-framework scone --raw`,
+    );
+
+    await setAppUniqueName();
+    raw = await execAsync(`${iexecPath} app deploy --raw`);
+    res = JSON.parse(raw);
+
+    sidechainDatapoolApp = res.address;
+
+    await execAsync(
+      `${iexecPath} workerpool init --raw`,
+    );
+
+    await setWorkerpoolUniqueDescription();
+    raw = await execAsync(`${iexecPath} workerpool deploy --raw`);
+    res = JSON.parse(raw);
+
+    sidechainDatapoolWorkerpool = res.address;
+
+    await execAsync('mv deployed.json deployed.datapool');
+    await execAsync('mv deployed.back deployed.json');
   });
   
   test('[sidechain] iexec datapool deploy', async () => {
     await setRichWallet();
-    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --app-restrict [${sidechainApp}] --workerpool-restrict [${sidechainWorkerpool}] --raw`);
+    const raw = await execAsync(`${iexecPath} datapool deploy --implementation ${DATAPOOL_IMPLEMENTATION.OPEN} --app-restrict [${sidechainDatapoolApp}] --workerpool-restrict [${sidechainDatapoolWorkerpool}] --raw`);
     const res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolAddress).toBeDefined();
@@ -3469,7 +3537,7 @@ describe('[Sidechain]', () => {
   });
 
   test('[sidechain] iexec datapool show (from deployed.json)', async () => {
-    const raw = await execAsync(`${iexecPath} datapool show --raw`);
+    const raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     const res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.datapoolContractAddress).toBeDefined();
@@ -3491,7 +3559,7 @@ describe('[Sidechain]', () => {
   test('[sidechain] iexec datapool show [datapoolAddress]', async () => {
     await execAsync('mv deployed.json deployed.back');
     const raw = await execAsync(
-      `${iexecPath} datapool show ${sidechainDatapool} --raw`,
+      `${iexecPath} datapool show ${sidechainDatapool} --all --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     const res = JSON.parse(raw);
@@ -3514,14 +3582,14 @@ describe('[Sidechain]', () => {
 
   test('[sidechain] iexec datapool check-allowed-app [address] (from deployed.json)', async () => {
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-app ${sidechainApp} --raw`,
+      `${iexecPath} datapool check-allowed-app ${sidechainDatapoolApp} --raw`,
     );
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.app).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.appAllowed).toBeDefined();
-    expect(res.app).toBe(sidechainApp);
+    expect(res.app).toBe(sidechainDatapoolApp);
     expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
     expect(res.appAllowed).toBe(true);
   });
@@ -3529,7 +3597,7 @@ describe('[Sidechain]', () => {
   test('[sidechain] iexec datapool check-allowed-app [address] (option)', async () => {
     await execAsync('mv deployed.json deployed.back');
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-app ${sidechainApp} --datapool-address ${sidechainDatapool} --raw`,
+      `${iexecPath} datapool check-allowed-app ${sidechainDatapoolApp} --datapool-address ${sidechainDatapool} --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     let res = JSON.parse(raw);
@@ -3537,21 +3605,21 @@ describe('[Sidechain]', () => {
     expect(res.app).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.appAllowed).toBeDefined();
-    expect(res.app).toBe(sidechainApp);
+    expect(res.app).toBe(sidechainDatapoolApp);
     expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
     expect(res.appAllowed).toBe(true);
   });
 
   test('[sidechain] iexec datapool check-allowed-workerpool [address] (from deployed.json)', async () => {
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-workerpool ${sidechainWorkerpool} --raw`,
+      `${iexecPath} datapool check-allowed-workerpool ${sidechainDatapoolWorkerpool} --raw`,
     );
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.workerpool).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.workerpoolAllowed).toBeDefined();
-    expect(res.workerpool).toBe(sidechainWorkerpool);
+    expect(res.workerpool).toBe(sidechainDatapoolWorkerpool);
     expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
     expect(res.workerpoolAllowed).toBe(true);
   });
@@ -3559,7 +3627,7 @@ describe('[Sidechain]', () => {
   test('[sidechain] iexec datapool check-allowed-workerpool [address] (option)', async () => {
     await execAsync('mv deployed.json deployed.back');
     let raw = await execAsync(
-      `${iexecPath} datapool check-allowed-workerpool ${sidechainWorkerpool} --datapool-address ${sidechainDatapool} --raw`,
+      `${iexecPath} datapool check-allowed-workerpool ${sidechainDatapoolWorkerpool} --datapool-address ${sidechainDatapool} --raw`,
     );
     await execAsync('mv deployed.back deployed.json');
     let res = JSON.parse(raw);
@@ -3567,7 +3635,7 @@ describe('[Sidechain]', () => {
     expect(res.workerpool).toBeDefined();
     expect(res.datapoolContractAddress).toBeDefined();
     expect(res.workerpoolAllowed).toBeDefined();
-    expect(res.workerpool).toBe(sidechainWorkerpool);
+    expect(res.workerpool).toBe(sidechainDatapoolWorkerpool);
     expect(res.datapoolContractAddress).toBe(sidechainDatapoolContract);
     expect(res.workerpoolAllowed).toBe(true);
   });
@@ -3661,7 +3729,7 @@ describe('[Sidechain]', () => {
     expect(res.address).toBeDefined();
     expect(res.hash).toBeDefined();
 
-    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
 
@@ -3682,7 +3750,7 @@ describe('[Sidechain]', () => {
     expect(res.address).toBeDefined();
     expect(res.hash).toBeDefined();
 
-    raw = await execAsync(`${iexecPath} datapool show --raw`);
+    raw = await execAsync(`${iexecPath} datapool show --all --raw`);
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
 
@@ -3691,41 +3759,55 @@ describe('[Sidechain]', () => {
   });
 
   test('[sidechain] iexec datapool create-order [address]', async () => {
+    await execAsync('mv deployed.json deployed.back');
+    await execAsync('mv deployed.datapool deployed.json');
     let raw = await execAsync(`${iexecPath} order init --raw`);
     let res = JSON.parse(raw);
     expect(res.ok).toBe(true);
     expect(res.apporder).toBeDefined();
     expect(res.workerpoolorder).toBeDefined();
     expect(res.requestorder).toBeDefined();
-    expect(res.apporder.app).toBe(sidechainApp);
-    expect(res.workerpoolorder.workerpool).toBe(sidechainWorkerpool);
+    expect(res.apporder.app).toBe(sidechainDatapoolApp);
+    expect(res.workerpoolorder.workerpool).toBe(sidechainDatapoolWorkerpool);
     expect(res.requestorder.requester).toBe(ADDRESS);
     expect(res.requestorder.beneficiary).toBe(ADDRESS);
     
     await editRequestorder({
-      app: sidechainApp,
+      app: sidechainDatapoolApp,
       dataset: sidechainDatapool,
-      workerpool: sidechainWorkerpool,
+      workerpool: sidechainDatapoolWorkerpool,
       category: sidechainNoDurationCatid,
       datasetmaxprice: 2,
-    });
-    await editWorkerpoolorder({
-      category: sidechainNoDurationCatid,
+      tag: ['tee', 'scone'],
     });
     raw = await execAsync(
-      `${iexecPath} order sign --skip-preflight-check --raw`,
+      `${iexecPath} order sign --request --skip-preflight-check --raw`,
     );
     res = JSON.parse(raw);
     expect(res.ok).toBe(true);
-    expect(res.apporder).toBeDefined();
-    expect(res.workerpoolorder).toBeDefined();
-    expect(res.requestorder).toBeDefined();
-    expect(res.apporder.app).toBeDefined();
-    expect(res.workerpoolorder.workerpool).toBeDefined();
-    expect(res.requestorder.app).toBeDefined();
+
+    await editWorkerpoolorder({
+      category: sidechainNoDurationCatid,
+      tag: ['tee', 'scone'],
+    });
 
     raw = await execAsync(
-      `${iexecPath} datapool create-order ${sidechainDatapool} --app ${sidechainApp} --workerpool ${sidechainWorkerpool} --volume 1 --raw`,
+      `${iexecPath} order sign --workerpool --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    await editApporder({
+      tag: ['tee', 'scone'],
+    });
+    raw = await execAsync(
+      `${iexecPath} order sign --app --skip-preflight-check --raw`,
+    );
+    res = JSON.parse(raw);
+    expect(res.ok).toBe(true);
+
+    raw = await execAsync(
+      `${iexecPath} datapool create-order ${sidechainDatapool} --app ${sidechainDatapoolApp} --workerpool ${sidechainDatapoolWorkerpool} --volume 1 --raw`,
     );
 
     res = JSON.parse(raw);
@@ -3734,16 +3816,16 @@ describe('[Sidechain]', () => {
     expect(res.datapoolorder.dataset).toEqual(sidechainDatapool);
     expect(res.datapoolorder.datasetprice).toEqual("2");
     expect(res.datapoolorder.volume).toEqual("1");
-    expect(res.datapoolorder.tag).toEqual(NULL_BYTES32);
-    expect(res.datapoolorder.apprestrict).toEqual(sidechainApp);
-    expect(res.datapoolorder.workerpoolrestrict).toEqual(sidechainWorkerpool);
+    expect(res.datapoolorder.tag).toEqual("0x0000000000000000000000000000000000000000000000000000000000000003");
+    expect(res.datapoolorder.apprestrict).toEqual(sidechainDatapoolApp);
+    expect(res.datapoolorder.workerpoolrestrict).toEqual(sidechainDatapoolWorkerpool);
     expect(res.datapoolorder.requesterrestrict).toEqual(ADDRESS);
     expect(parseInt(res.datapoolorder.deadline, 10)).toBeGreaterThan(0);
     expect(res.datapoolorder.salt).toEqual("0x0000000000000000000000000000000000000000000000000000000000000002");
     expect(res.datapoolorder.sign).toEqual("0x");
 
     raw = await execAsync(
-      `${iexecPath} order fill --raw`,
+      `${iexecPath} order fill --skip-preflight-check --raw`,
     );
 
     res = JSON.parse(raw);
@@ -3751,6 +3833,9 @@ describe('[Sidechain]', () => {
     expect(res.volume).toBe('1');
     expect(res.dealid).toBeDefined();
     expect(res.txHash).toBeDefined();
+
+    await execAsync('mv deployed.json deployed.datapool');
+    await execAsync('mv deployed.back deployed.json');
   });
 
   test('[sidechain] iexec dataset leave-datapool [address] (from deployed.json)', async () => {

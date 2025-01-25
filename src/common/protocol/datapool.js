@@ -579,7 +579,20 @@ export const createDatapoolOrder = async (
       contracts,
       datapoolNftAddress,
     );
-    if (datapoolState.activeDatasetCount === "0") throw new Error('Datapool is empty at the moment!')
+    if (datapoolState.activeDatasetCount === "0") throw new Error('Datapool is empty at the moment!');
+    const { appAllowed } = await isAppAllowed(
+      contracts,
+      datapoolNftAddress,
+      app
+    );
+    if (!appAllowed) throw new Error('App is not authorized!');
+
+    const { workerpoolAllowed } = await isWorkerpoolAllowed(
+      contracts,
+      datapoolNftAddress,
+      workerpool
+    );
+    if (!workerpoolAllowed) throw new Error('Workerpool is not authorized!');
 
 
     const tx = await wrapSend(

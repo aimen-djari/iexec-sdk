@@ -3861,7 +3861,9 @@ describe('[datapool]', () => {
       },
     );
 
-    const { address: appAddress } = await deployRandomApp(iexec);
+    const { address: appAddress } = await deployRandomApp(iexec, {
+      teeFramework: TEE_FRAMEWORKS.SCONE,
+    });
     datapoolApp = appAddress;
 
 
@@ -4064,7 +4066,7 @@ describe('[datapool]', () => {
     expect(res.datapoolorder.dataset).toEqual(datapoolNftAddress);
     expect(res.datapoolorder.datasetprice.toString()).toEqual("3");
     expect(res.datapoolorder.volume.toString()).toEqual("1");
-    expect(res.datapoolorder.tag).toEqual("0x0000000000000000000000000000000000000000000000000000000000000000");
+    expect(res.datapoolorder.tag).toEqual("0x0000000000000000000000000000000000000000000000000000000000000003");
     expect(res.datapoolorder.apprestrict).toEqual(datapoolApp);
     expect(res.datapoolorder.workerpoolrestrict).toEqual(datapoolWorkerpool);
     const requester = await iexec.wallet.getAddress();
@@ -4075,12 +4077,14 @@ describe('[datapool]', () => {
     const datapoolorder = res.datapoolorder;
     let order = await iexec.order.createApporder({
       app: datapoolApp,
+      tag: ['tee', 'scone'],
     });
     const apporder = await iexec.order.signApporder(order);
 
     order = await iexec.order.createWorkerpoolorder({
       workerpool: datapoolWorkerpool,
       category: 0,
+      tag: ['tee', 'scone'],
     });
 
     const workerpoolorder = await iexec.order.signWorkerpoolorder(order);
@@ -4092,9 +4096,14 @@ describe('[datapool]', () => {
       datasetmaxprice: '3',
       volume: '1',
       category: 0,
+      tag: ['tee', 'scone'],
     });
 
-    const requestorder = await iexec.order.signRequestorder(order);
+    const requestorder = await iexec.order.signRequestorder(order, 
+      { preflightCheck: false },);
+
+      console.log(datapoolorder);
+      console.log(Date.now());
 
     res = await iexec.order.matchOrders(
       {
