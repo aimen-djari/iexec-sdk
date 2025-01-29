@@ -38,6 +38,11 @@ export default class IExecDatasetModule extends IExecModule {
     this.removeFromDatapool = async (datapoolNftAddress, datasetAddress) =>
     removeDataset(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
 
+    this.showVersionReward = async (datapoolNftAddress, versionid, datasetAddress) =>
+    showVersionReward(await this.config.resolveContractsClient(), datapoolNftAddress, versionid, datasetAddress);
+    this.showAllVersionsRewards = async (datapoolNftAddress, datasetAddress) =>
+    showAllVersionsRewards(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
+
     this.withdrawVersionRewardInDatapool = async (datapoolNftAddress, datasetAddress, versionid) =>
     withdrawVersionReward(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress, versionid);
 

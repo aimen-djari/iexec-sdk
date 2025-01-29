@@ -16,6 +16,7 @@ import {
   addDataset,
   removeDataset,
   isActiveDataset,
+  showVersionReward,
   showAllVersionsRewards,
   withdrawVersionReward,
 } from '../../common/protocol/datapool.js';
@@ -855,6 +856,61 @@ removeFromDatapool
       handleError(error, cli, opts);
     }
   });
+
+  const showVersionReward = cli.command('show-version-reward [datapoolNftAddress] [versionid]');
+  addGlobalOptions(showVersionReward);
+  addWalletLoadOptions(showVersionReward);
+  showVersionReward
+    .option(...option.chain())
+    .option(...option.txGasPrice())
+    .option(...option.txConfirms())
+    .option(...option.datasetAddress())
+    .description(desc.showObj("Datapool", 'reward'))
+    .action(async (cliAddress, versionid, opts) => {
+      await checkUpdate(opts);
+      const spinner = Spinner(opts);
+      try {
+        //const walletOptions = computeWalletLoadOptions(opts);
+        const txOptions = await computeTxOptions(opts);
+        //const keystore = Keystore(walletOptions);
+        const [chain] = await Promise.all([
+          loadChain(opts.chain, { txOptions, spinner }),
+        ]);
+        const datapoolNftAddress = cliAddress;
+  
+        const datasetAddress =
+          opts.dataset ||
+          (await loadDeployedObj(objName).then(
+            (deployedObj) => deployedObj && deployedObj[chain.id],
+          ));
+  
+        if (!datasetAddress) throw Error(info.missingAddressOrDeployed(objName, chain.id));
+        if (!datapoolNftAddress) throw Error(info.missingAddressOrDeployed(DATAPOOL, chain.id));
+  
+        //await connectKeystore(chain, keystore, { txOptions });
+        spinner.start(info.updating(objName));
+  
+        const { result } = await showVersionReward(
+          chain.contracts,
+          datapoolNftAddress,
+          datasetAddress,
+          versionid,
+        );
+  
+  
+        spinner.succeed(
+          `Datapool ${datapoolNftAddress} version ${versionid} reward:${pretty({
+            ...result,
+          })}`,
+          {
+            raw: { datapoolNftAddress, datasetAddress, result },
+          },
+        );
+      } catch (error) {
+        handleError(error, cli, opts);
+      }
+  
+    });
 
 const showReward = cli.command('show-reward [datapoolNftAddress]');
 addGlobalOptions(showReward);

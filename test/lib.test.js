@@ -4143,7 +4143,7 @@ describe('[datapool]', () => {
 
     await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
 
-    const res = await iexec.datapool.showVersionReward(datapoolNftAddress, 0, datasetAddress);
+    const res = await iexec.dataset.showVersionReward(datapoolNftAddress, 0, datasetAddress);
     expect(res.reward).toEqual("0");
     expect(res.claimable).toEqual("0");
   });
@@ -4171,7 +4171,7 @@ describe('[datapool]', () => {
 
     await iexec.dataset.addToDatapool(datapoolNftAddress, datasetAddress);
 
-    const res = await iexec.datapool.showAllVersionsRewards(datapoolNftAddress, datasetAddress);
+    const res = await iexec.dataset.showAllVersionsRewards(datapoolNftAddress, datasetAddress);
     expect(res.result[1].reward).toEqual("0");
     expect(res.result[1].claimable).toEqual("0");
     expect(res.result[2].reward).toEqual("0");

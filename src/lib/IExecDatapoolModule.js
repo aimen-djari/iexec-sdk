@@ -2,8 +2,6 @@ import IExecModule from './IExecModule.js';
 import {
   createDatapool,
   showDatapoolState,
-  showVersionReward,
-  showAllVersionsRewards,
   isAppAllowed,
   isWorkerpoolAllowed,
   setDatapoolOwnerPrice,
@@ -26,11 +24,6 @@ export default class IExecDatapoolModule extends IExecModule {
 
     this.showDatapoolState = async (datapoolNftAddress) =>
     showDatapoolState(await this.config.resolveContractsClient(), datapoolNftAddress);
-
-    this.showVersionReward = async (datapoolNftAddress, versionid, datasetAddress) =>
-    showVersionReward(await this.config.resolveContractsClient(), datapoolNftAddress, versionid, datasetAddress);
-    this.showAllVersionsRewards = async (datapoolNftAddress, datasetAddress) =>
-    showAllVersionsRewards(await this.config.resolveContractsClient(), datapoolNftAddress, datasetAddress);
 
     this.isAppAllowed = async (datapoolNftAddress, appAddress) =>
     isAppAllowed(await this.config.resolveContractsClient(), datapoolNftAddress, appAddress);
