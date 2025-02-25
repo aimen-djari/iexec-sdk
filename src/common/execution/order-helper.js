@@ -27,8 +27,8 @@ import { resolveTeeFrameworkFromApp, showApp } from '../protocol/registries.js';
 
 export const resolveTeeFrameworkFromTag = async (tag) => {
   const vTag = await tagSchema().validate(tag);
-  if (checkActiveBitInTag(vTag, TAG_MAP[TEE_FRAMEWORKS.SCONE])) {
-    return TEE_FRAMEWORKS.SCONE;
+  if (checkActiveBitInTag(vTag, TAG_MAP[TEE_FRAMEWORKS.TDX])) {
+    return TEE_FRAMEWORKS.TDX;
   }
   if (checkActiveBitInTag(vTag, TAG_MAP[TEE_FRAMEWORKS.GRAMINE])) {
     return TEE_FRAMEWORKS.GRAMINE;
@@ -194,7 +194,7 @@ export const checkAppRequirements = async (
   const appTeeFramework = await showApp(contracts, app).then((res) =>
     resolveTeeFrameworkFromApp(res.app, { strict: false }),
   );
-  if (appTeeFramework !== tagTeeFramework) {
+  if (appTeeFramework !== tagTeeFramework && tagTeeFramework !== TEE_FRAMEWORKS.TDX) {
     throw Error('Tag mismatch the TEE framework specified by app');
   }
 };

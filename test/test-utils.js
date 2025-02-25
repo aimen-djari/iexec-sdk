@@ -453,7 +453,7 @@ const createAndPublishWorkerpoolOrder = async (
     requesterrestrict: voucherOwnerAddress,
     volume,
     workerpoolprice,
-    tag: ['tee', 'scone'],
+    tag: ['tee', 'tdx'],
   });
 
   await iexec.order

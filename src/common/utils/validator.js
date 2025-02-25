@@ -581,7 +581,7 @@ export const objMrenclaveSchema = () =>
     fingerprint: string().required(),
     // framework specific keys
     entrypoint: mixed().when('framework', ([framework], entrypointSchema) =>
-      framework && framework.toLowerCase() === TEE_FRAMEWORKS.SCONE
+      framework && framework.toLowerCase() === "scone"
         ? string().required()
         : entrypointSchema.is(
             [undefined],
@@ -589,7 +589,7 @@ export const objMrenclaveSchema = () =>
           ),
     ),
     heapSize: mixed().when('framework', ([framework], entrypointSchema) =>
-      framework && framework.toLowerCase() === TEE_FRAMEWORKS.SCONE
+      framework && framework.toLowerCase() === "scone"
         ? positiveIntSchema().required()
         : entrypointSchema.is(
             [undefined],

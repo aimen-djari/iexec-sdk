@@ -20,7 +20,7 @@ import {
   apporderSchema,
   requestorderSchema,
 } from '../../common/utils/validator.js';
-import { sconeTeeApp, gramineTeeApp } from '../utils/templates.js';
+import { tdxTeeApp, gramineTeeApp } from '../utils/templates.js';
 import {
   deployApp,
   showApp,
@@ -157,8 +157,8 @@ init
             await loadChain(opts.chain, { spinner }),
           ));
       let teeTemplate = {};
-      if (teeFramework === TEE_FRAMEWORKS.SCONE) {
-        teeTemplate = sconeTeeApp;
+      if (teeFramework === TEE_FRAMEWORKS.TDX) {
+        teeTemplate = tdxTeeApp;
       }
       if (teeFramework === TEE_FRAMEWORKS.GRAMINE) {
         teeTemplate = gramineTeeApp;
@@ -201,12 +201,23 @@ deploy
           `Missing ${objName} in "iexec.json". Did you forget to run "iexec ${objName} init"?`,
         );
       }
+      iexecConf[objName].mrenclave = {
+        framework: 'SCONE',
+        version: 'v5',
+        entrypoint: 'python /app/app.py',
+        heapSize: 1073741824,
+        fingerprint:
+          'a5b171bd7b8ecd9724b07d901c21f2d0c02d64339a818562a8554c7f60dec2cb',
+      };
+
       await connectKeystore(chain, keystore, { txOptions });
       spinner.start(info.deploying(objName));
+      
       const { address, txHash } = await deployApp(
         chain.contracts,
         iexecConf[objName],
       );
+      
       spinner.succeed(`Deployed new ${objName} at address ${address}`, {
         raw: { address, txHash },
       });

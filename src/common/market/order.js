@@ -413,17 +413,35 @@ export const signWorkerpoolorder = async (
     }).validate(workerpoolorder),
   );
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const showWarning = async () => {
+    console.log("\n\n" + "=".repeat(100));
+    console.log("⚠️  WARNING: You are using an alpha TDX testbed! ⚠️");
+    console.log("   Some bugs might appear, and stability is not guaranteed.");
+    console.log("=".repeat(100) + "\n\n");
+
+    await sleep(3000); // Wait for 3 seconds before continuing
+  };
+
 export const signRequestorder = async (
   contracts = throwIfMissing(),
   requestorder = throwIfMissing(),
-) =>
-  signOrder(
+) => {
+
+  if(requestorder.workerpool == "0xfd7F9813D4A147BC222a9A99B8Fea1553F7eEDB1"){
+    await showWarning();
+  }
+
+  return signOrder(
     contracts,
     REQUEST_ORDER,
     await requestorderSchema({
       ethProvider: contracts.provider,
     }).validate(requestorder),
   );
+}
+  
 
 const cancelOrder = async (
   contracts = throwIfMissing(),

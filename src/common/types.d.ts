@@ -125,7 +125,7 @@ export type HumanSingleTag = string;
  * example:
  * ```js
  * const gpuTag = ['gpu'];
- * const sconeTeeTag = ['tee', 'scone'];
+ * const tdxTeeApp = ['tee', 'tdx'];
  * const gramineTeeTag = ['tee', 'gramine'];
  * ```
  */
@@ -144,7 +144,7 @@ export type Multiaddress = string | Buffer;
 /**
  * Trusted Execution Environment name
  */
-export type TeeFramework = 'scone' | 'gramine';
+export type TeeFramework = 'tdx' | 'gramine';
 
 export type AnyRecord = Record<string, any>;
 

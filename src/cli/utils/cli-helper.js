@@ -893,7 +893,7 @@ export const getPropertyFormChain = (
 
 export const getDefaultTeeFrameworkFromChain = (chain) =>
   getPropertyFormChain(chain, 'defaultTeeFramework', { strict: false }) ||
-  TEE_FRAMEWORKS.SCONE;
+  TEE_FRAMEWORKS.TDX;
 
 export const getSmsUrlFromChain = (
   chain,

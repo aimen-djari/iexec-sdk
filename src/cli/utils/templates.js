@@ -21,20 +21,15 @@ export const app = {
     '0xaea3f77f09567fa0da20b86d9b7dac3ef958b7d4751a37cfa7cd7851f57ac191',
 };
 
-export const sconeTeeApp = {
+export const tdxTeeApp = {
   owner: '0x0000000000000000000000000000000000000000',
-  name: 'hello-world-scone',
+  name: 'hello-world',
   type: 'DOCKER',
-  multiaddr: 'iexechub/python-hello-world:8.0.0-sconify-5.7.5-v12-production',
+  multiaddr: 'iexechub/python-hello-world:7.0.5',
   checksum:
-    '0xc9d25041956bfc6961d47294b528887879c26ad4110de17cf4b985ba51f93bd2',
+    '0xaea3f77f09567fa0da20b86d9b7dac3ef958b7d4751a37cfa7cd7851f57ac191',
   mrenclave: {
-    framework: 'SCONE',
-    version: 'v5',
-    entrypoint: 'python /app/app.py',
-    heapSize: 1073741824,
-    fingerprint:
-      'a5b171bd7b8ecd9724b07d901c21f2d0c02d64339a818562a8554c7f60dec2cb',
+    framework: 'TDX',
   },
 };
 
@@ -146,7 +141,7 @@ export const chains = {
   default: 'bellecour',
   chains: {
     mainnet: {},
-    bellecour: {},
+    bellecour: { "sms": {"tdx": "https://sms.labs.iex.ec" }},
   },
 };
 
