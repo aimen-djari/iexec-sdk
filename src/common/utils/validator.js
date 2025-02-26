@@ -27,7 +27,7 @@ const posIntRegex = /^\d+$/;
 
 const posStrictIntRegex = /^[1-9]\d*$/;
 
-const teeFrameworksList = Object.values(TEE_FRAMEWORKS);
+const teeFrameworksList = [...Object.values(TEE_FRAMEWORKS), 'scone'];
 
 export const stringSchema = string;
 
