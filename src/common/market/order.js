@@ -417,7 +417,7 @@ export const signWorkerpoolorder = async (
 
   const showWarning = async () => {
     console.log("\n\n" + "=".repeat(100));
-    console.log("⚠️  WARNING: You are using an alpha TDX testbed! ⚠️");
+    console.log("⚠️  WARNING: You are using an alpha TDX workerpool! ⚠️");
     console.log("   Some bugs might appear, and stability is not guaranteed.");
     console.log("=".repeat(100) + "\n\n");
 
