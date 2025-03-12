@@ -356,6 +356,7 @@ checkSecret
       if (!teeFramework) {
         const { app } = await showApp(chain.contracts, resourceAddress);
         teeFramework = await resolveTeeFrameworkFromApp(app);
+        teeFramework = teeFramework === 'scone' ? 'tdx' : teeFramework;
       }
       const sms = getSmsUrlFromChain(chain, { teeFramework });
       const secretIsSet = await checkAppSecretExists(
@@ -409,6 +410,7 @@ pushSecret
       if (!teeFramework) {
         const { app } = await showApp(chain.contracts, resourceAddress);
         teeFramework = await resolveTeeFrameworkFromApp(app);
+        teeFramework = teeFramework === 'scone' ? 'tdx' : teeFramework;
       }
       const sms = getSmsUrlFromChain(chain, { teeFramework });
       const secretValue =
