@@ -10,16 +10,22 @@ The iExec SDK is a CLI and a JS library that allows easy interactions with iExec
 
 The iExec javascript SDK can be imported in your frontend or backend JS project.
 
-install
+install modules
 
 ```sh
 npm install iexec
 ```
 
+build iExec
+
+```sh
+npm run build
+```
+
 import
 
 ```js
-import { IExec } from 'iexec';
+import { IExec } from './iexec';
 ```
 
 Check the [documentation](./docs/README.md)
@@ -28,10 +34,23 @@ Check the [documentation](./docs/README.md)
 
 The iExec SDK comes with a command line interface enabling interactions with the decentralized marketplace from a terminal.
 
-install
+install modules
 
 ```sh
-npm install -g iexec
+npm install iexec
+```
+
+build iExec
+
+```sh
+npm run build
+```
+
+install
+
+```js
+npm install -g ~/iexec
+```
 
 # check commands
 iexec help
